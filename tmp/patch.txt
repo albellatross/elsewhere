@@ -1,0 +1,1 @@
+Line 554-565 should be removed (the gpt-image warning section)
