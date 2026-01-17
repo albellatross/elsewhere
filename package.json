@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "build:pages": "vite build && rm -rf docs && mkdir docs && cp -R dist/. docs/"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
