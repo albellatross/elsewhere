@@ -318,8 +318,16 @@ serve(async (req) => {
 
             const isAzure = effectiveBaseUrl.includes('azure.com');
             const allowReferenceImages =
-                activeProviderKey !== 'chatgpt_image' || (!!backendRefImages.length && !!(inputImageBase64 || user_inputs.photo_storage_path));
+                activeProviderKey !== 'chatgpt_image'
+                || (!!backendRefImages.length
+                    && (
+                        !!(inputImageBase64 || user_inputs.photo_storage_path)
+                        || ((variant.key || '').toLowerCase() === 'a_moment_in_zootopia')
+                    ));
             const effectiveRefImages = allowReferenceImages ? backendRefImages : [];
+            const referenceStrength = typeof user_inputs.reference_strength === 'number'
+                ? user_inputs.reference_strength
+                : (promptConfig.params_json?.reference_strength as number | undefined);
 
 
             if (activeProviderKey === 'chatgpt_image' || activeProviderKey === 'openai') {
@@ -432,6 +440,13 @@ serve(async (req) => {
                         // ⚡️ SPEED OPTIMIZATION: Force standard quality for speed
                         quality: "standard"
                     };
+
+                    if (effectiveRefImages.length > 0) {
+                        requestBody.reference_images = effectiveRefImages;
+                        if (typeof referenceStrength === 'number') {
+                            requestBody.reference_strength = referenceStrength;
+                        }
+                    }
 
                     if (isAzure) {
                         // 🧹 Robust Azure URL Cleaning
