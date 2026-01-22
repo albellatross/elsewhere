@@ -317,7 +317,8 @@ serve(async (req) => {
             }
 
             const isAzure = effectiveBaseUrl.includes('azure.com');
-            const allowReferenceImages = activeProviderKey !== 'chatgpt_image';
+            const allowReferenceImages =
+                activeProviderKey !== 'chatgpt_image' || (!!backendRefImages.length && !!(inputImageBase64 || user_inputs.photo_storage_path));
             const effectiveRefImages = allowReferenceImages ? backendRefImages : [];
 
 
