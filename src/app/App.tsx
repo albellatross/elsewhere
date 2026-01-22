@@ -26,6 +26,8 @@ export default function App() {
             </Route>
 
             {/* Main User App - Catch all others */}
+            {/* Main User App */}
+            <Route path="/" element={<UserApp />} />
             <Route path="*" element={<UserApp />} />
         </Routes>
     );
