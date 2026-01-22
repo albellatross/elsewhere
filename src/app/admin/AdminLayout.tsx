@@ -10,6 +10,15 @@ import { Toaster } from '../components/ui/sonner';
 export default function AdminLayout() {
     const location = useLocation();
 
+    React.useEffect(() => {
+        const originalTitle = document.title;
+        document.title = 'elsewhere admin page';
+
+        return () => {
+            document.title = originalTitle;
+        };
+    }, []);
+
     const navItems = [
         { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/admin/features', label: 'Features', icon: Layers },
