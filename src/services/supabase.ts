@@ -1,8 +1,8 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { supabaseUrl as defaultSupabaseUrl, supabaseAnonKey as defaultSupabaseAnonKey } from '../app/services/config';
+import { supabaseUrl as fallbackSupabaseUrl, supabaseAnonKey as fallbackSupabaseAnonKey } from '../app/services/supabaseEnv';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || defaultSupabaseUrl;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || defaultSupabaseAnonKey;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || fallbackSupabaseUrl;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || fallbackSupabaseAnonKey;
 
 export const supabase = createClient(supabaseUrl, supabaseKey);

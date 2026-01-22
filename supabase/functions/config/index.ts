@@ -13,15 +13,27 @@ serve(async (req) => {
 
     try {
         const url = new URL(req.url);
-        const type = url.searchParams.get('type'); // features, variants, details
+        let type = url.searchParams.get('type'); // features, variants, details
+        let featureKey = url.searchParams.get('feature_key');
+        let variantKey = url.searchParams.get('variant_key');
+
+        if (req.method === 'POST') {
+            const body = await req.json().catch(() => null);
+            if (body && typeof body === 'object') {
+                const payload = body as Record<string, unknown>;
+                type = (payload['type'] as string | null | undefined) ?? type;
+                featureKey = (payload['feature_key'] as string | null | undefined) ??
+                    (payload['featureKey'] as string | null | undefined) ?? featureKey;
+                variantKey = (payload['variant_key'] as string | null | undefined) ??
+                    (payload['variantKey'] as string | null | undefined) ?? variantKey;
+            }
+        }
 
         // 🔑 AUTH FIX: Use Service Role for Config Access
         const serviceClient = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         );
-
-        // 1. Get All Features
         if (type === 'features') {
             const { data, error } = await serviceClient
                 .from('features')
@@ -35,7 +47,6 @@ serve(async (req) => {
 
         // 2. Get Variants for a Feature
         if (type === 'variants') {
-            const featureKey = url.searchParams.get('feature_key');
             if (!featureKey) throw new Error('Missing feature_key');
 
             // First get feature_id from key
@@ -55,10 +66,8 @@ serve(async (req) => {
 
         // 3. Get Details for a Variant (Prompt + References)
         if (type === 'details') {
-            const variantKey = url.searchParams.get('variant_key');
-            // Should also filter by feature_key to be safe, but variant_key is unique per feature usually. 
+            // Should also filter by feature_key to be safe, but variant_key is unique per feature usually.
             // Our schema has unique(feature_id, key), so we need feature_id context ideally.
-            const featureKey = url.searchParams.get('feature_key');
 
             if (!variantKey || !featureKey) throw new Error('Missing variant_key or feature_key');
 

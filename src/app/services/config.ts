@@ -1,26 +1,18 @@
-const FALLBACK_SUPABASE_URL = 'https://kmjfxqzquuprgfgqurmc.supabase.co';
-const FALLBACK_SUPABASE_ANON_KEY = 'sb_publishable_h-0hslflVXwpTfYsemSwQA_J04M6RI3';
+import { supabase } from '../../services/supabase';
+import { isConfigured } from './supabaseEnv';
 
-export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL;
-export const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || FALLBACK_SUPABASE_ANON_KEY;
-
-export const isConfigured = Boolean(supabaseUrl && supabaseAnonKey);
-
-export const baseHeaders = isConfigured
-  ? {
-      Authorization: `Bearer ${supabaseAnonKey}`,
-      apikey: supabaseAnonKey,
-    }
-  : null;
-
-export const configEndpoint = isConfigured
-  ? `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/config`
-  : null;
+const CONFIG_FUNCTION_NAME = 'config';
 
 type ApiResult<T> = {
   data?: T | null;
   error?: string | null;
   [key: string]: unknown;
+};
+
+type ConfigRequestPayload = {
+  type: 'features' | 'variants' | 'details';
+  feature_key?: string;
+  variant_key?: string | null;
 };
 
 export type ConfigFeature = {
@@ -76,51 +68,53 @@ export type VariantDetailsResponse = {
   references: VariantReference[];
 };
 
-async function request<T>(path: string): Promise<T | null> {
-  if (!configEndpoint || !baseHeaders) {
+async function invokeConfig<T>(payload: ConfigRequestPayload): Promise<T | null> {
+  if (!isConfigured) {
     console.warn('[config] Supabase environment variables missing.');
     return null;
   }
 
-  const url = `${configEndpoint}${path}${path.includes('?') ? '&' : '?'}_=${Date.now()}`;
-
   try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: baseHeaders,
-      cache: 'no-store',
+    const { data, error } = await supabase.functions.invoke<ApiResult<T>>(CONFIG_FUNCTION_NAME, {
+      body: payload,
     });
 
-    const payload = (await response.json().catch(() => null)) as ApiResult<T> | null;
-
-    if (!response.ok || !payload) {
-      console.warn('[config] Failed request', { path: url, status: response.status });
+    if (error) {
+      console.warn('[config] Failed request', { payload, error });
       return null;
     }
 
-    if (payload.error) {
-      console.warn('[config] Error payload', { path: url, error: payload.error });
+    if (!data) {
+      console.warn('[config] Empty response', { payload });
       return null;
     }
 
-    if (payload.data !== undefined) {
-      return (payload.data ?? null) as T | null;
+    if (typeof data === 'object' && data !== null) {
+      const result = data as ApiResult<T>;
+      if (result.error) {
+        console.warn('[config] Error payload', { payload, error: result.error });
+        return null;
+      }
+
+      if (result.data !== undefined) {
+        return (result.data ?? null) as T | null;
+      }
     }
 
-    console.warn('[config] Unexpected response shape', { path: url, payload });
+    console.warn('[config] Unexpected response shape', { payload, data });
     return null;
   } catch (error) {
-    console.warn('[config] Network error', { path: url, error });
+    console.warn('[config] Network error', { payload, error });
     return null;
   }
 }
 
 export async function fetchFeatures(): Promise<ConfigFeature[] | null> {
-  return request<ConfigFeature[]>('?type=features');
+  return invokeConfig<ConfigFeature[]>({ type: 'features' });
 }
 
 export async function fetchVariants(featureKey: string): Promise<ConfigVariant[] | null> {
-  return request<ConfigVariant[]>(`?type=variants&feature_key=${encodeURIComponent(featureKey)}`);
+  return invokeConfig<ConfigVariant[]>({ type: 'variants', feature_key: featureKey });
 }
 
 export async function fetchVariantDetails(
@@ -128,7 +122,9 @@ export async function fetchVariantDetails(
   variantKey: string | null | undefined,
 ): Promise<VariantDetailsResponse | null> {
   if (!variantKey) return null;
-  return request<VariantDetailsResponse>(
-    `?type=details&feature_key=${encodeURIComponent(featureKey)}&variant_key=${encodeURIComponent(variantKey)}`,
-  );
+  return invokeConfig<VariantDetailsResponse>({
+    type: 'details',
+    feature_key: featureKey,
+    variant_key: variantKey,
+  });
 }

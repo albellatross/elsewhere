@@ -7,7 +7,8 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import GeneratingLottie from './GeneratingLottie';
 import { useEdgeGeneration } from '../hooks/useEdgeGeneration';
 import { supabase } from '../../services/supabase';
-import { supabaseUrl as fallbackSupabaseUrl, supabaseAnonKey as fallbackSupabaseAnonKey } from '../services/config';
+import { supabaseUrl as fallbackSupabaseUrl, supabaseAnonKey as fallbackSupabaseAnonKey } from '../services/supabaseEnv';
+import { fetchVariantDetails, fetchVariants } from '../services/config';
 import { X, Upload, Key, Eye, EyeOff, Coffee, Soup, MessageCircle, Wind, Sparkles, PartyPopper, Camera, UtensilsCrossed, Sunrise, Armchair } from 'lucide-react';
 import svgPaths from "../../imports/svg-lxjhel9141";
 import svgPathsFigma from "../../imports/svg-pike97bdu9";
@@ -251,47 +252,20 @@ export default function IDPhotoDetailPage({ onClose }: IDPhotoDetailPageProps) {
   };
 
   const syncVariantPrompts = async () => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || fallbackSupabaseUrl;
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || fallbackSupabaseAnonKey;
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return null;
-    }
-
     try {
-      const variantsResp = await fetch(
-        `${supabaseUrl}/functions/v1/config?type=variants&feature_key=create_id_photo`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${supabaseAnonKey}`,
-            apikey: supabaseAnonKey
-          }
-        }
-      );
-      const variantsData = await variantsResp.json();
-      if (!variantsResp.ok || !variantsData?.data) {
+      const variants = await fetchVariants('create_id_photo');
+      if (!variants || !variants.length) {
         addLog('⚠️ Config sync failed (variants).');
         return null;
       }
 
-      const variants = variantsData.data as Array<{ key: string; name: string }>;
       setVariantCatalog(variants);
 
       const detailsResults = await Promise.all(
         variants.map(async (variant) => {
-          const detailsResp = await fetch(
-            `${supabaseUrl}/functions/v1/config?type=details&feature_key=create_id_photo&variant_key=${variant.key}`,
-            {
-              method: 'GET',
-              headers: {
-                Authorization: `Bearer ${supabaseAnonKey}`,
-                apikey: supabaseAnonKey
-              }
-            }
-          );
-          const detailsData = await detailsResp.json();
-          if (!detailsResp.ok) return null;
-          return { key: variant.key, prompt: detailsData?.data?.prompt };
+          const detail = await fetchVariantDetails('create_id_photo', variant.key);
+          if (!detail) return null;
+          return { key: variant.key, prompt: detail.prompt };
         })
       );
 
@@ -301,6 +275,7 @@ export default function IDPhotoDetailPage({ onClose }: IDPhotoDetailPageProps) {
           nextPromptCatalog[item.key] = item.prompt || {};
         }
       });
+
       setPromptCatalog(nextPromptCatalog);
       setLastConfigSyncAt(Date.now());
       addLog(`✅ Synced variants/prompts (${variants.length})`);
