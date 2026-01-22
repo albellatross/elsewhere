@@ -945,9 +945,10 @@ export default function SketchIllustrationPage({
             addLog('⚠️ WARNING: DALL-E 3 does not support image-to-image generation');
             addLog('⚠️ Falling back to text-to-image mode (uploaded image will be ignored)');
           } else {
-            // 其他模型：默认支持
+            // 其他模型同样改用 edits 端点，Azure 不再接受 multipart generations
+            fullApiUrl = fullApiUrl.replace('/images/generations', '/images/edits');
             useMultipartFormData = true;
-            addLog('🔄 Using image-to-image with /images/generations');
+            addLog('🔄 Using image-to-image via /images/edits endpoint (auto-mapped)');
           }
         }
       } else if (isAzureCognitiveServices && deploymentId) {
@@ -975,10 +976,10 @@ export default function SketchIllustrationPage({
             addLog('⚠️ WARNING: DALL-E 3 does not support image-to-image generation');
             addLog('⚠️ Falling back to text-to-image mode (uploaded image will be ignored)');
           } else {
-            // 其他模型：默认使用 generations 端点 + multipart
-            fullApiUrl = `${baseUrl}/openai/deployments/${encodedDeployment}/images/generations?api-version=${apiVersion}`;
+            // 其他模型默认也改用 edits 端点，避免 multipart generations 被拒绝
+            fullApiUrl = `${baseUrl}/openai/deployments/${encodedDeployment}/images/edits?api-version=${apiVersion}`;
             useMultipartFormData = true;
-            addLog('🔄 Using image-to-image via /images/generations endpoint (multipart)');
+            addLog('🔄 Using image-to-image via /images/edits endpoint (auto-mapped)');
           }
         } else {
           // 文生图：使用 generations 端点
@@ -1015,6 +1016,12 @@ export default function SketchIllustrationPage({
       } else {
         // 其他 API (OpenAI 或自定义)
         fullApiUrl = `${baseUrl}/v1/images/generations`;
+      }
+
+      if (useMultipartFormData && fullApiUrl.includes('/images/generations')) {
+        // Azure 近期开始拒绝 multipart generations，请自动切换至 edits。
+        fullApiUrl = fullApiUrl.replace('/images/generations', '/images/edits');
+        addLog('🔄 Auto-switched multipart request to /images/edits to satisfy provider requirements');
       }
 
       // 构建请求头
