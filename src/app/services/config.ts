@@ -1,23 +1,19 @@
-const FALLBACK_SUPABASE_URL = 'https://your-project.supabase.co';
-const FALLBACK_SUPABASE_ANON_KEY = 'your-anon-key';
+const FALLBACK_SUPABASE_URL = 'https://kmjfxqzquuprgfgqurmc.supabase.co';
+const FALLBACK_SUPABASE_ANON_KEY = 'sb_publishable_h-0hslflVXwpTfYsemSwQA_J04M6RI3';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || FALLBACK_SUPABASE_ANON_KEY;
+export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL;
+export const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || FALLBACK_SUPABASE_ANON_KEY;
 
-const isConfigured =
-  supabaseUrl &&
-  supabaseUrl !== FALLBACK_SUPABASE_URL &&
-  supabaseAnonKey &&
-  supabaseAnonKey !== FALLBACK_SUPABASE_ANON_KEY;
+export const isConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
-const baseHeaders = isConfigured
+export const baseHeaders = isConfigured
   ? {
       Authorization: `Bearer ${supabaseAnonKey}`,
       apikey: supabaseAnonKey,
     }
   : null;
 
-const configEndpoint = isConfigured
+export const configEndpoint = isConfigured
   ? `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/config`
   : null;
 

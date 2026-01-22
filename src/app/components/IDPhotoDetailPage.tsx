@@ -7,6 +7,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import GeneratingLottie from './GeneratingLottie';
 import { useEdgeGeneration } from '../hooks/useEdgeGeneration';
 import { supabase } from '../../services/supabase';
+import { supabaseUrl as fallbackSupabaseUrl, supabaseAnonKey as fallbackSupabaseAnonKey } from '../services/config';
 import { X, Upload, Key, Eye, EyeOff, Coffee, Soup, MessageCircle, Wind, Sparkles, PartyPopper, Camera, UtensilsCrossed, Sunrise, Armchair } from 'lucide-react';
 import svgPaths from "../../imports/svg-lxjhel9141";
 import svgPathsFigma from "../../imports/svg-pike97bdu9";
@@ -250,9 +251,9 @@ export default function IDPhotoDetailPage({ onClose }: IDPhotoDetailPageProps) {
   };
 
   const syncVariantPrompts = async () => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('your-project')) {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || fallbackSupabaseUrl;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || fallbackSupabaseAnonKey;
+    if (!supabaseUrl || !supabaseAnonKey) {
       return null;
     }
 
@@ -578,10 +579,10 @@ export default function IDPhotoDetailPage({ onClose }: IDPhotoDetailPageProps) {
         throw new Error("Missing API Configuration. Please set API Key and URL in the API Key modal.");
       }
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('your-project')) {
-        throw new Error('Supabase 未配置：请设置 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY，否则无法调用 Edge Function。');
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || fallbackSupabaseUrl;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || fallbackSupabaseAnonKey;
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Supabase 未配置：请设置 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY，或使用部署提供的默认值。');
       }
 
       let apiUrlToUse = rawApiUrl.trim();
