@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, ChangeEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Upload, Sparkles, Key, Eye, EyeOff, Check, AlertTriangle } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
@@ -63,10 +63,12 @@ export default function RemixIdeaDetailPage({ ideaId, onClose, onSelectIdea }: R
   const [configSyncError, setConfigSyncError] = useState<string | null>(null);
   const [detectedGender, setDetectedGender] = useState<DetectedGender>(null);
   const [genderConfidence, setGenderConfidence] = useState<number | null>(null);
+  const [selectedReferenceTokens, setSelectedReferenceTokens] = useState<string[]>([]);
   const isGenerating = stage === 'remixing';
   const canGenerate = !!uploadedImage;
   const { detectGender } = useGenderDetector();
   const currentVariantKey = idea?.variantKey ?? 'a_moment_in_zootopia';
+  const isReferenceSelectionEnabled = currentVariantKey === 'step_into_a_character';
   const shouldDetectGender = currentVariantKey === 'step_into_a_character';
   const genderConfidencePercent = genderConfidence !== null ? Math.round(genderConfidence * 100) : null;
   const trimmedApiKey = apiKey.trim();
@@ -173,6 +175,7 @@ export default function RemixIdeaDetailPage({ ideaId, onClose, onSelectIdea }: R
     setGenderConfidence(null);
     setVariantDetail(null);
     setConfigSyncError(null);
+    setSelectedReferenceTokens([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -209,9 +212,39 @@ export default function RemixIdeaDetailPage({ ideaId, onClose, onSelectIdea }: R
     };
   }, [idea, currentVariantKey]);
 
+  useEffect(() => {
+    if (!isReferenceSelectionEnabled) {
+      if (selectedReferenceTokens.length) {
+        setSelectedReferenceTokens([]);
+      }
+      return;
+    }
+
+    setSelectedReferenceTokens((prev) => {
+      const valid = prev.filter((token) => referenceOptions.some((option) => option.token === token));
+      if (valid.length) {
+        return valid;
+      }
+      return referenceOptions.map((option) => option.token);
+    });
+  }, [isReferenceSelectionEnabled, referenceOptions]);
+
   if (!idea) return null;
   const displayDescription = variantDetail?.variant?.description || idea.description;
   const referenceImages = (variantDetail?.references || []).filter((ref) => !!ref?.public_url);
+  const referenceOptions = useMemo(
+    () =>
+      referenceImages.map((ref, index) => ({
+        ref,
+        token: ref.id ?? ref.key ?? `ref-${index}`,
+      })),
+    [referenceImages],
+  );
+  const selectedReferenceEntries = useMemo(
+    () => referenceOptions.filter((option) => selectedReferenceTokens.includes(option.token)),
+    [referenceOptions, selectedReferenceTokens],
+  );
+  const selectedReferenceCount = selectedReferenceEntries.length;
 
   const runGenderDetection = useCallback(async (file: File) => {
     if (!shouldDetectGender) return;
@@ -225,6 +258,15 @@ export default function RemixIdeaDetailPage({ ideaId, onClose, onSelectIdea }: R
       setGenderConfidence(null);
     }
   }, [detectGender, shouldDetectGender]);
+
+  const toggleReferenceToken = useCallback((token: string) => {
+    setSelectedReferenceTokens((prev) => {
+      if (prev.includes(token)) {
+        return prev.filter((item) => item !== token);
+      }
+      return [...prev, token];
+    });
+  }, []);
 
   const handleUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -440,6 +482,21 @@ export default function RemixIdeaDetailPage({ ideaId, onClose, onSelectIdea }: R
       if (genderConfidence !== null) {
         planUserInputs.gender_confidence = genderConfidence;
       }
+      if (isReferenceSelectionEnabled && selectedReferenceEntries.length > 0) {
+        const selectedKeys = selectedReferenceEntries
+          .map(({ ref }) => ref.key)
+          .filter((key): key is string => Boolean(key));
+        const selectedIds = selectedReferenceEntries
+          .map(({ ref }) => ref.id)
+          .filter((id): id is string => Boolean(id));
+
+        if (selectedKeys.length > 0) {
+          planUserInputs.selected_reference_keys = selectedKeys;
+        }
+        if (selectedIds.length > 0) {
+          planUserInputs.selected_reference_ids = selectedIds;
+        }
+      }
 
       const { data: planData, error: planError } = await supabase.functions.invoke('generate-image', {
         body: {
@@ -637,6 +694,75 @@ export default function RemixIdeaDetailPage({ ideaId, onClose, onSelectIdea }: R
                     {isSyncingConfig ? (
                       <p className="font-sans text-[10px] text-[#999]">Syncing…</p>
                     ) : null}
+                  </div>
+                ) : null}
+                {isReferenceSelectionEnabled && referenceOptions.length ? (
+                  <div className="flex flex-col gap-2 px-2 pt-3">
+                    <div className="flex items-center justify-between">
+                      <p className="font-sans font-semibold text-xs text-[#050505]">参考图选择</p>
+                      <div className="flex items-center gap-2 text-[10px]">
+                        <button
+                          type="button"
+                          className="text-[#5b21b6] hover:text-[#4c1d95] transition-colors"
+                          onClick={() => setSelectedReferenceTokens(referenceOptions.map((option) => option.token))}
+                        >
+                          全选
+                        </button>
+                        <span className="text-[#d4d4d8]">|</span>
+                        <button
+                          type="button"
+                          className="text-[#5b21b6] hover:text-[#4c1d95] transition-colors"
+                          onClick={() => setSelectedReferenceTokens([])}
+                        >
+                          清空
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {referenceOptions.map((option) => {
+                        const isSelected = selectedReferenceTokens.includes(option.token);
+                        const strengthValue = typeof option.ref.adjustment_strength === 'number'
+                          ? option.ref.adjustment_strength
+                          : null;
+                        const strengthLabel = strengthValue !== null
+                          ? `力度 ${strengthValue.toFixed(2)}`
+                          : null;
+                        return (
+                          <button
+                            type="button"
+                            key={option.token}
+                            onClick={() => toggleReferenceToken(option.token)}
+                            className={`relative aspect-[3/4] overflow-hidden rounded-xl border transition-all ${isSelected ? 'border-[#8b5cf6] ring-2 ring-[#8b5cf6]/60 shadow-md' : 'border-[#e5e5e5] hover:border-[#c4b5fd]'}`}
+                            aria-pressed={isSelected}
+                          >
+                            <img
+                              src={option.ref.public_url || ''}
+                              alt={option.ref.name || 'Reference'}
+                              className="size-full object-cover"
+                            />
+                            <div className={`absolute inset-0 transition-opacity ${isSelected ? 'bg-[#8b5cf6]/25 opacity-100' : 'opacity-0 hover:opacity-60 bg-black/30'}`} />
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1">
+                              <p className="font-sans text-[10px] text-white truncate">
+                                {option.ref.name || option.ref.key || '参考图'}
+                              </p>
+                              {strengthLabel ? (
+                                <p className="font-sans text-[10px] text-white/80 truncate">{strengthLabel}</p>
+                              ) : null}
+                            </div>
+                            {isSelected ? (
+                              <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#8b5cf6] text-white flex items-center justify-center shadow-md">
+                                <Check className="w-3 h-3" />
+                              </div>
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedReferenceTokens.length === 0 ? (
+                      <p className="font-sans text-[10px] text-[#b45309]">未选择参考图，将使用系统默认推荐。</p>
+                    ) : (
+                      <p className="font-sans text-[10px] text-[#666]">已选择 {selectedReferenceCount} 张参考图，可多选。</p>
+                    )}
                   </div>
                 ) : null}
               </div>

@@ -179,7 +179,10 @@ serve(async (req) => {
         let finalPrompt = promptConfig.prompt_template || "";
         Object.keys(user_inputs).forEach(key => {
             const val = user_inputs[key];
-            finalPrompt = finalPrompt.replace(new RegExp(`{{${key}}}`, 'g'), String(val));
+            const valueType = typeof val;
+            if (valueType === 'string' || valueType === 'number' || valueType === 'boolean') {
+                finalPrompt = finalPrompt.replace(new RegExp(`{{${key}}}`, 'g'), String(val));
+            }
         });
         if (user_inputs.background_prompt && !(promptConfig.prompt_template || "").includes('{{background_prompt}}')) {
             finalPrompt += " " + user_inputs.background_prompt;
@@ -195,34 +198,72 @@ serve(async (req) => {
 
             if ((variant.key || '').toLowerCase() === 'step_into_a_character') {
                 const normalizedAssets = refAssets.filter((item: any) => item?.asset);
-                const inputGender = (user_inputs.gender ?? '').toString().toLowerCase();
-                const genderPrefix = inputGender === 'female'
-                    ? 'character_0'
-                    : inputGender === 'male'
-                        ? 'character_1'
-                        : null;
+                const requestedKeys = Array.isArray(user_inputs.selected_reference_keys)
+                    ? user_inputs.selected_reference_keys
+                        .map((value: any) => {
+                            if (typeof value === 'string') return value.trim();
+                            const strValue = value?.toString?.();
+                            return typeof strValue === 'string' ? strValue.trim() : null;
+                        })
+                        .filter((value: string | null): value is string => Boolean(value))
+                    : [];
+                const requestedIds = Array.isArray(user_inputs.selected_reference_ids)
+                    ? user_inputs.selected_reference_ids
+                        .map((value: any) => {
+                            if (typeof value === 'string') return value.trim();
+                            const strValue = value?.toString?.();
+                            return typeof strValue === 'string' ? strValue.trim() : null;
+                        })
+                        .filter((value: string | null): value is string => Boolean(value))
+                    : [];
 
-                const selectPool = (prefix: string | null) => {
-                    if (!prefix) return [] as any[];
-                    return normalizedAssets.filter((item: any) => (item.asset?.key || '').startsWith(prefix));
-                };
+                const matches = (requestedKeys.length || requestedIds.length)
+                    ? normalizedAssets.filter((item: any) => {
+                        const assetKey = item.asset?.key ? String(item.asset.key) : null;
+                        const assetId = item.asset?.id ? String(item.asset.id) : null;
+                        const hitKey = assetKey ? requestedKeys.includes(assetKey) : false;
+                        const hitId = assetId ? requestedIds.includes(assetId) : false;
+                        return hitKey || hitId;
+                    })
+                    : [];
 
-                const randomPick = (items: any[]) => items[Math.floor(Math.random() * items.length)];
+                if (matches.length > 0) {
+                    assetsToUse = matches;
+                    addLog('Step Into Character reference selection (user choice)', {
+                        requestedKeys,
+                        requestedIds,
+                        resolved: matches.map((item: any) => item?.asset?.key || null).filter((key: string | null) => key)
+                    });
+                } else {
+                    const inputGender = (user_inputs.gender ?? '').toString().toLowerCase();
+                    const genderPrefix = inputGender === 'female'
+                        ? 'character_0'
+                        : inputGender === 'male'
+                            ? 'character_1'
+                            : null;
 
-                let candidate = genderPrefix ? selectPool(genderPrefix) : [];
-                if (!candidate.length) {
-                    candidate = normalizedAssets.filter((item: any) => (item.asset?.key || '').startsWith('character_'));
+                    const selectPool = (prefix: string | null) => {
+                        if (!prefix) return [] as any[];
+                        return normalizedAssets.filter((item: any) => (item.asset?.key || '').startsWith(prefix));
+                    };
+
+                    const randomPick = (items: any[]) => items[Math.floor(Math.random() * items.length)];
+
+                    let candidate = genderPrefix ? selectPool(genderPrefix) : [];
+                    if (!candidate.length) {
+                        candidate = normalizedAssets.filter((item: any) => (item.asset?.key || '').startsWith('character_'));
+                    }
+                    if (!candidate.length) {
+                        candidate = normalizedAssets;
+                    }
+
+                    assetsToUse = candidate.length ? [randomPick(candidate)] : [];
+
+                    addLog('Step Into Character reference selection (fallback)', {
+                        gender: inputGender,
+                        pool: candidate.map((item: any) => item?.asset?.key || null).filter((key: string | null) => key)
+                    });
                 }
-                if (!candidate.length) {
-                    candidate = normalizedAssets;
-                }
-
-                assetsToUse = candidate.length ? [randomPick(candidate)] : [];
-
-                addLog('Step Into Character reference selection', {
-                    gender: inputGender,
-                    pool: candidate.map((item: any) => item?.asset?.key || null).filter((key: string | null) => key)
-                });
             }
 
             const resolveSignedUrl = async (storagePath: string | null | undefined) => {
