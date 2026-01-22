@@ -410,7 +410,7 @@ function ResetButton({ className, property1 = "Default" }: ResetButtonProps) {
   const element1 = (
     <Wrapper>
       <ArrowReset className="overflow-clip relative shrink-0 size-[20px]" />
-      <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Reset</p>
+      <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Reset</p>
     </Wrapper>
   );
   if (property1 === "Variant2") {
@@ -829,8 +829,8 @@ function Image1({ className, property1 = "Default" }: Image1Props) {
           <Image1ImageImage />
           <div className="absolute backdrop-blur-[7.5px] backdrop-filter bg-[rgba(39,39,39,0.54)] inset-[-0.88%_-11.76%_-0.88%_-11.23%]" />
           <div className="absolute content-stretch flex flex-col gap-[8px] items-center justify-center leading-[normal] left-1/2 px-[20px] py-0 text-center top-1/2 translate-x-[-50%] translate-y-[-50%] w-[183px]">
-            <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold relative shrink-0 text-[16px] text-white w-full">Professional use</p>
-            <p className="font-['Alexandria:Medium',sans-serif] font-medium relative shrink-0 text-[#ccc] text-[10px] w-full">Polished, confident, workplace-ready</p>
+            <p className="font-sans font-semibold relative shrink-0 text-[16px] text-white w-full">Professional use</p>
+            <p className="font-sans font-medium relative shrink-0 text-[#ccc] text-[10px] w-full">Polished, confident, workplace-ready</p>
           </div>
         </div>
         <div aria-hidden="true" className="absolute border-[2.77px] border-solid border-white inset-0 pointer-events-none rounded-[22.14px]" />
@@ -866,8 +866,8 @@ function Image2({ className, property1 = "Default" }: Image2Props) {
           <Image2ImageImage />
           <div className="absolute backdrop-blur-[7.5px] backdrop-filter bg-[rgba(39,39,39,0.54)] inset-[-0.88%_-11.17%]" />
           <div className="absolute content-stretch flex flex-col gap-[8px] inset-[34.07%_1.6%_34.07%_1.06%] items-center justify-center leading-[normal] px-[20px] py-0 text-center">
-            <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold relative shrink-0 text-[16px] text-white w-full">Official submission</p>
-            <p className="font-['Alexandria:Medium',sans-serif] font-medium relative shrink-0 text-[#ccc] text-[10px] w-full">Strict, neutral, compliance-focused</p>
+            <p className="font-sans font-semibold relative shrink-0 text-[16px] text-white w-full">Official submission</p>
+            <p className="font-sans font-medium relative shrink-0 text-[#ccc] text-[10px] w-full">Strict, neutral, compliance-focused</p>
           </div>
         </div>
         <div aria-hidden="true" className="absolute border-[2.77px] border-solid border-white inset-0 pointer-events-none rounded-[22.14px]" />
@@ -1385,8 +1385,8 @@ export default function IdPhoto() {
                     </div>
                   </div>
                   <div className="content-stretch flex flex-col gap-[8px] items-start leading-[normal] relative shrink-0 text-[#050505] w-[1036px]" data-name="content">
-                    <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold relative shrink-0 text-[20px] w-full">ID Photo</p>
-                    <p className="font-['Alexandria:Regular',sans-serif] font-normal relative shrink-0 text-[16px] w-full">Clean, compliant photos for official use</p>
+                    <p className="font-sans font-semibold relative shrink-0 text-[20px] w-full">ID Photo</p>
+                    <p className="font-sans font-normal relative shrink-0 text-[16px] w-full">Clean, compliant photos for official use</p>
                   </div>
                 </div>
               </div>
@@ -1394,7 +1394,7 @@ export default function IdPhoto() {
                 <div aria-hidden="true" className="absolute border border-[rgba(31,31,31,0.1)] border-solid inset-0 pointer-events-none rounded-[999px]" />
                 <Wrapper>
                   <Key className="overflow-clip relative shrink-0 size-[16px]" />
-                  <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">API key</p>
+                  <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">API key</p>
                 </Wrapper>
               </div>
             </div>
@@ -1407,7 +1407,7 @@ export default function IdPhoto() {
               <div className="content-stretch flex flex-col gap-[28px] items-start relative shrink-0 w-full">
                 <div className="content-stretch flex gap-[12px] items-center justify-center pl-[8px] pr-0 py-0 relative shrink-0">
                   <PersonBoardAdd className="relative shrink-0 size-[28px]" size="28" />
-                  <ol className="block font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[0] list-decimal relative shrink-0 text-[#050505] text-[16px] text-center text-nowrap uppercase" start="1">
+                  <ol className="block font-sans font-semibold leading-[0] list-decimal relative shrink-0 text-[#050505] text-[16px] text-center text-nowrap uppercase" start="1">
                     <li className="list-inside ms-[24px]">
                       <span className="leading-[normal]">photo input</span>
                     </li>
@@ -1427,8 +1427,8 @@ export default function IdPhoto() {
                         </div>
                       </div>
                       <div className="content-stretch flex flex-col gap-[8px] items-center leading-[normal] relative shrink-0">
-                        <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold relative shrink-0 text-[#050505] text-[16px] text-center w-full">Upload Photo</p>
-                        <p className="font-['Alexandria:Medium',sans-serif] font-medium relative shrink-0 text-[#999] text-[13px] w-full">Face should be clearly visible</p>
+                        <p className="font-sans font-semibold relative shrink-0 text-[#050505] text-[16px] text-center w-full">Upload Photo</p>
+                        <p className="font-sans font-medium relative shrink-0 text-[#999] text-[13px] w-full">Face should be clearly visible</p>
                       </div>
                     </div>
                   </div>
@@ -1437,7 +1437,7 @@ export default function IdPhoto() {
               <div className="content-stretch flex flex-col gap-[28px] items-start relative shrink-0 w-full">
                 <div className="content-stretch flex gap-[12px] items-center justify-center pl-[8px] pr-0 py-0 relative shrink-0">
                   <Guest className="overflow-clip relative shrink-0 size-[28px]" size="28" />
-                  <ol className="block font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[0] list-decimal relative shrink-0 text-[#050505] text-[16px] text-center text-nowrap uppercase" start="2">
+                  <ol className="block font-sans font-semibold leading-[0] list-decimal relative shrink-0 text-[#050505] text-[16px] text-center text-nowrap uppercase" start="2">
                     <li className="list-inside ms-[24px]">
                       <span className="leading-[normal]">Photo Purpose</span>
                     </li>
@@ -1451,7 +1451,7 @@ export default function IdPhoto() {
               <div className="content-stretch flex flex-col gap-[28px] items-start relative shrink-0 w-full">
                 <div className="content-stretch flex gap-[12px] items-center justify-center pl-[8px] pr-0 py-0 relative shrink-0">
                   <ImageTable className="overflow-clip relative shrink-0 size-[28px]" size="28" />
-                  <ol className="block font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[0] list-decimal relative shrink-0 text-[#050505] text-[16px] text-center text-nowrap uppercase" start="3">
+                  <ol className="block font-sans font-semibold leading-[0] list-decimal relative shrink-0 text-[#050505] text-[16px] text-center text-nowrap uppercase" start="3">
                     <li className="list-inside ms-[24px]">
                       <span className="leading-[normal]">background</span>
                     </li>
@@ -1466,7 +1466,7 @@ export default function IdPhoto() {
                 </div>
               </div>
               <div className="content-stretch flex flex-col gap-[8px] items-start justify-center pb-0 pt-[20px] px-0 relative shrink-0 w-full">
-                <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 text-[11px] text-black text-nowrap">* Ready to generate a compliant ID photo</p>
+                <p className="font-sans font-normal leading-[normal] relative shrink-0 text-[11px] text-black text-nowrap">* Ready to generate a compliant ID photo</p>
                 <IdPhotoHelper additionalClassNames="bg-[#333] rounded-[12px] w-full">
                   <div className="overflow-clip relative shrink-0 size-[20px]" data-name="Sparkle">
                     <IdPhotoShape additionalClassNames="h-[13.997px] top-1/2 w-[14.001px]">
@@ -1475,7 +1475,7 @@ export default function IdPhoto() {
                       </svg>
                     </IdPhotoShape>
                   </div>
-                  <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[16px] text-[rgba(255,255,255,0.9)] text-nowrap">Generate</p>
+                  <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[16px] text-[rgba(255,255,255,0.9)] text-nowrap">Generate</p>
                 </IdPhotoHelper>
               </div>
             </div>
@@ -1488,7 +1488,7 @@ export default function IdPhoto() {
                     <div aria-hidden="true" className="absolute border-[#b3b3b3] border-[1.68px] border-dashed inset-[-0.84px] pointer-events-none rounded-[9.8px]" />
                     <Image className="overflow-clip relative shrink-0 size-[32px]" size="32" />
                     <div className="content-stretch flex flex-col items-center relative shrink-0">
-                      <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-center w-full">Image preview</p>
+                      <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-center w-full">Image preview</p>
                     </div>
                   </div>
                   <div className="content-stretch flex items-center justify-between relative shrink-0 w-full">
@@ -1501,7 +1501,7 @@ export default function IdPhoto() {
                           </svg>
                         </IdPhotoShape>
                       </div>
-                      <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[16px] text-[rgba(255,255,255,0.9)] text-nowrap">Download</p>
+                      <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[16px] text-[rgba(255,255,255,0.9)] text-nowrap">Download</p>
                     </IdPhotoHelper>
                   </div>
                 </div>

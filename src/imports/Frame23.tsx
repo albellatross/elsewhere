@@ -42,7 +42,7 @@ export default function Frame() {
                 <path d={svgPaths.p8fd1770} fill="var(--fill-0, #242424)" id="Shape" />
               </g>
             </Wrapper>
-            <ol className="block font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[0] list-decimal relative shrink-0 text-[#050505] text-[16px] text-center text-nowrap uppercase" start="1">
+            <ol className="block font-sans font-semibold leading-[0] list-decimal relative shrink-0 text-[#050505] text-[16px] text-center text-nowrap uppercase" start="1">
               <li className="list-inside ms-[24px]">
                 <span className="leading-[normal]">photo input</span>
               </li>
@@ -58,8 +58,8 @@ export default function Frame() {
               </svg>
             </div>
             <div className="content-stretch flex flex-col gap-[8px] items-center leading-[normal] relative shrink-0">
-              <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold relative shrink-0 text-[#050505] text-[16px] text-center w-full">Upload Photo</p>
-              <p className="font-['Alexandria:Medium',sans-serif] font-medium relative shrink-0 text-[#999] text-[13px] w-full">Face should be clearly visible</p>
+              <p className="font-sans font-semibold relative shrink-0 text-[#050505] text-[16px] text-center w-full">Upload Photo</p>
+              <p className="font-sans font-medium relative shrink-0 text-[#999] text-[13px] w-full">Face should be clearly visible</p>
             </div>
           </div>
         </div>
@@ -70,7 +70,7 @@ export default function Frame() {
                 <path d={svgPaths.p1f995572} fill="var(--fill-0, #242424)" id="Shape" />
               </g>
             </Wrapper>
-            <ol className="block font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[0] list-decimal relative shrink-0 text-[#050505] text-[16px] text-center text-nowrap uppercase" start="2">
+            <ol className="block font-sans font-semibold leading-[0] list-decimal relative shrink-0 text-[#050505] text-[16px] text-center text-nowrap uppercase" start="2">
               <li className="list-inside ms-[24px]">
                 <span className="leading-[normal]">Photo Purpose</span>
               </li>
@@ -96,7 +96,7 @@ export default function Frame() {
                 <path d={svgPaths.p3f6d3580} fill="var(--fill-0, #242424)" id="Shape" />
               </g>
             </Wrapper>
-            <ol className="block font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[0] list-decimal relative shrink-0 text-[#050505] text-[16px] text-center text-nowrap uppercase" start="3">
+            <ol className="block font-sans font-semibold leading-[0] list-decimal relative shrink-0 text-[#050505] text-[16px] text-center text-nowrap uppercase" start="3">
               <li className="list-inside ms-[24px]">
                 <span className="leading-[normal]">background</span>
               </li>
@@ -138,7 +138,7 @@ export default function Frame() {
           </div>
         </div>
         <div className="content-stretch flex flex-col gap-[8px] items-start justify-center pb-0 pt-[20px] px-0 relative shrink-0 w-full">
-          <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 text-[11px] text-black text-nowrap">* Ready to generate a compliant ID photo</p>
+          <p className="font-sans font-normal leading-[normal] relative shrink-0 text-[11px] text-black text-nowrap">* Ready to generate a compliant ID photo</p>
           <div className="bg-[#333] h-[50px] relative rounded-[12px] shrink-0 w-full" data-name="Generate button">
             <div className="flex flex-row items-center justify-center size-full">
               <div className="content-stretch flex gap-[10px] items-center justify-center pl-[20px] pr-[24px] py-[12px] relative size-full">
@@ -149,7 +149,7 @@ export default function Frame() {
                     </g>
                   </svg>
                 </div>
-                <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[16px] text-[rgba(255,255,255,0.9)] text-nowrap">Generate</p>
+                <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[16px] text-[rgba(255,255,255,0.9)] text-nowrap">Generate</p>
               </div>
             </div>
           </div>

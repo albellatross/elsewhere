@@ -1,0 +1,11 @@
+face swap, identity change, altered facial structure, modified face shape, changed facial proportions, different eye shape, nose change, mouth change, jawline change, head shape change
+beautification, beauty filter, skin smoothing, airbrushed skin, plastic skin, over-retouching, symmetry correction
+cartoon human face, illustrated human skin, anime-style human, painterly human texture
+distorted face, warped face, asymmetrical face, misaligned eyes, crossed eyes
+incorrect Nick Wilde design, incorrect Judy Hopps design, altered character facial features, wrong fur color, wrong ear shape, incorrect body proportions
+hybrid human-animal face, partial face morphing, uncanny valley
+poor compositing, visible cutout edges, halos, white outlines, hard edges, mismatched lighting
+blurry face, low-resolution face, motion blur on faces
+wrong camera angle, side view face, tilted head, cropped head, extreme perspective distortion
+empty theater, incorrect cinema screen content, wrong movie poster, unreadable screen
+watermark, logo artifacts, text artifacts, duplicate characters, extra limbs, extra faces

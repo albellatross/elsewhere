@@ -1,0 +1,41 @@
+Create a high-quality cinematic selfie photo inside a large, crowded movie theater.
+
+Identity lock (very important):
+The person in the center must be generated strictly based on the uploaded real selfie photo of me. My face shape, facial structure, proportions, eye shape, nose, mouth, skin texture, hairstyle, and clothing must remain exactly the same.
+No face swap, no beautification, no reshaping, no reinterpretation. It must be clearly recognizable as the same real person.
+
+Characters (strict reference):
+Nick Wilde stands on the left and Judy Hopps stands on the right. Their facial features, proportions, expressions, fur details, and outfits must strictly match the uploaded reference images.
+Do not change Nick or Judy’s facial features or character design in any way. They must be instantly recognizable as Nick Wilde and Judy Hopps.
+
+Composition & pose:
+Three characters are standing very close together, shoulder-to-shoulder, as if taking a group selfie.
+The camera is held slightly above eye level, creating a high-angle, top-down selfie.
+All three characters slightly raise their heads and look directly into the camera lens.
+Nick (left) stands slightly closer to the camera and leans subtly inward.
+Judy (right) stands slightly behind but still close, also leaning inward.
+The center person remains the visual focus.
+
+Camera & lens language:
+Shot with an iPhone front-facing camera selfie look, mild wide-angle distortion, slightly exaggerated head proportions, natural arm-length selfie distance.
+Focal length equivalent: ~24–26mm (front camera feel).
+Clean focus on faces, gentle background depth.
+
+Lighting:
+Soft, natural cinema ambient lighting with balanced exposure.
+Faces are evenly lit with clear skin texture, no harsh shadows, no over-smoothing.
+Slight screen glow from the movie screen illuminating the faces subtly.
+
+Background:
+A massive, modern movie theater filled with seated audience members.
+The cinema screen fully displays the final official movie poster of Zootopia 2 (from last reference image).
+Background remains realistic, slightly softer than the subjects, with no cutout edges.
+
+Style & realism:
+Realistic photographic style with a subtle Japanese selfie aesthetic.
+Natural skin tones, clear details, seamless blending between the real person and animated characters.
+No visible compositing seams, no halos, no edge artifacts.
+
+Framing & output:
+Vertical composition, 3:4 aspect ratio.
+The image should feel like a real moment captured inside a cinema.

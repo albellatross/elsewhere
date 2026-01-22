@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { motion, useInView } from 'motion/react';
 import svgPaths from "../../imports/svg-t4c74lvrtc";
 import imgCard02 from "figma:asset/7aa95b09a23fe314cbceec472e6eb4a58c4a639e.png";
@@ -42,8 +42,8 @@ type ContentProps = {
 function Content({ text, text1 }: ContentProps) {
   return (
     <div className="content-stretch flex flex-col gap-[15px] items-start leading-[normal] relative shrink-0 text-[#050505] w-full">
-      <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold relative shrink-0 text-[20px] w-full">{text}</p>
-      <p className="font-['Alexandria:Regular',sans-serif] font-normal relative shrink-0 text-[16px] w-full">{text1}</p>
+      <p className="font-sans font-semibold relative shrink-0 text-[20px] w-full">{text}</p>
+      <p className="font-sans font-normal relative shrink-0 text-[16px] w-full">{text1}</p>
     </div>
   );
 }
@@ -58,83 +58,6 @@ export default function TemplatesSection({ onCardClick }: TemplatesSectionProps)
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
   const cardsContainerRef = useRef<HTMLDivElement>(null);
-  const [hasScrolledToCenter, setHasScrolledToCenter] = useState(false);
-
-  // 智能滚动到视口中心
-  useEffect(() => {
-    if (isInView && !hasScrolledToCenter && sectionRef.current) {
-      // 延迟执行，确保所有动画和布局都已完成
-      const timer = setTimeout(() => {
-        if (!sectionRef.current) return;
-        
-        const section = sectionRef.current;
-        const rect = section.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        const sectionHeight = rect.height;
-        
-        // 计算理想的居中位置
-        // section的上边缘应该在 viewportCenter - sectionHeight/2
-        const viewportCenter = viewportHeight / 2;
-        const idealTop = viewportCenter - sectionHeight / 2;
-        const currentTop = rect.top;
-        
-        // 向上滚动为负值，向下滚动为正值
-        const scrollDistance = currentTop - idealTop;
-        
-        // 只在需要显著调整时才滚动
-        if (Math.abs(scrollDistance) > 30) {
-          window.scrollBy({
-            top: scrollDistance,
-            behavior: 'smooth'
-          });
-        }
-        
-        setHasScrolledToCenter(true);
-      }, 600);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [isInView, hasScrolledToCenter]);
-
-  // 窗口大小改变时重新计算居中（如果已经居中过）
-  useEffect(() => {
-    if (!hasScrolledToCenter || !sectionRef.current) return;
-
-    const handleResize = () => {
-      if (!sectionRef.current) return;
-      
-      const section = sectionRef.current;
-      const rect = section.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const sectionHeight = rect.height;
-      
-      const viewportCenter = viewportHeight / 2;
-      const idealTop = viewportCenter - sectionHeight / 2;
-      const currentTop = rect.top;
-      const scrollDistance = currentTop - idealTop;
-      
-      // 窗口变化时也进行居中调整
-      if (Math.abs(scrollDistance) > 50) {
-        window.scrollBy({
-          top: scrollDistance,
-          behavior: 'smooth'
-        });
-      }
-    };
-
-    // 使用防抖，避免频繁触发
-    let resizeTimer: number;
-    const debouncedResize = () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = window.setTimeout(handleResize, 200);
-    };
-
-    window.addEventListener('resize', debouncedResize);
-    return () => {
-      window.removeEventListener('resize', debouncedResize);
-      clearTimeout(resizeTimer);
-    };
-  }, [hasScrolledToCenter]);
 
   const scrollToIndex = (index: number) => {
     if (cardsContainerRef.current) {
@@ -191,7 +114,7 @@ export default function TemplatesSection({ onCardClick }: TemplatesSectionProps)
       hoverBg: 'rgba(239, 228, 203, 0.95)' // #EFE4CB
     },
     {
-      id: 'pet-portrait',
+      id: 'product-visuals',
       img: imgCard6,
       imageTop: '-4%',
       title: 'Product Visuals',
@@ -223,11 +146,11 @@ export default function TemplatesSection({ onCardClick }: TemplatesSectionProps)
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             <div className="content-stretch flex flex-col gap-[clamp(10px,1.2vh,14px)] items-start relative shrink-0 max-w-[699px]" data-name="title">
-              <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[1.2] relative shrink-0 text-[#1c1c1e] 
+              <p className="font-nord font-semibold leading-[1.2] relative shrink-0 text-[#1c1c1e] 
                            text-[clamp(18px,4.8vw,22px)] md:text-[clamp(20px,1.4vw,26px)]">
                 Create images that fit real moments
               </p>
-              <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[1.35] relative shrink-0 text-[#5f5f66] 
+              <p className="font-nord font-normal leading-[1.35] relative shrink-0 text-[#5f5f66] 
                            text-[clamp(15px,4vw,17px)] md:text-[clamp(16px,1.05vw,19px)] max-w-[685px]">
                 Professional, personal, or playful — start with a template and shape the result your way.
               </p>
@@ -304,11 +227,11 @@ export default function TemplatesSection({ onCardClick }: TemplatesSectionProps)
                     
                     {/* 文字内容 - 优化字号和间距 */}
                     <div className="content-stretch flex flex-col gap-[clamp(10px,1.1vh,16px)] items-start leading-[normal] relative shrink-0 text-[#050505] w-full">
-                      <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold relative shrink-0 w-full
+                      <p className="font-sans font-semibold relative shrink-0 w-full
                                    text-[clamp(16px,4.2vw,19px)] md:text-[clamp(17px,1.3vw,20px)]">
                         {card.title}
                       </p>
-                      <p className="font-['Alexandria:Regular',sans-serif] font-normal relative shrink-0 w-full text-[#5f5f66] leading-[1.4]
+                      <p className="font-sans font-normal relative shrink-0 w-full text-[#5f5f66] leading-[1.4]
                                    text-[clamp(12px,3.2vw,13px)] md:text-[clamp(12px,0.85vw,14px)]">
                         {card.description}
                       </p>
@@ -316,7 +239,7 @@ export default function TemplatesSection({ onCardClick }: TemplatesSectionProps)
                   </div>
                   
                   {/* Tags - 优化字号 */}
-                  <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 w-full text-[#8e8e93] z-10 
+                  <p className="font-sans font-normal leading-[normal] relative shrink-0 w-full text-[#8e8e93] z-10 
                                mt-[clamp(14px,1.5vh,26px)]
                                text-[clamp(12px,3.2vw,13px)] md:text-[clamp(12px,0.8vw,14px)]">
                     {card.tags}

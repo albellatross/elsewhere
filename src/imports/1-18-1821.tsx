@@ -30,8 +30,8 @@ type ContentProps = {
 function Content({ text, text1 }: ContentProps) {
   return (
     <div className="content-stretch flex flex-col gap-[15px] items-start leading-[normal] relative shrink-0 text-[#050505] w-full">
-      <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold relative shrink-0 text-[20px] w-full">{text}</p>
-      <p className="font-['Alexandria:Regular',sans-serif] font-normal relative shrink-0 text-[16px] w-full">{text1}</p>
+      <p className="font-sans font-semibold relative shrink-0 text-[20px] w-full">{text}</p>
+      <p className="font-sans font-normal relative shrink-0 text-[16px] w-full">{text1}</p>
     </div>
   );
 }
@@ -42,8 +42,8 @@ export default function Component() {
       <div className="content-stretch flex flex-col gap-[30px] items-start relative shrink-0" data-name="content">
         <div className="content-stretch flex items-end justify-between relative shrink-0 w-full">
           <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0 w-[699px]" data-name="title">
-            <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[28px] relative shrink-0 text-[#1c1c1e] text-[24px] text-nowrap">Create images that fit real moments</p>
-            <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[24px] relative shrink-0 text-[#5f5f66] text-[20px] w-[685px]">Professional, personal, or playful — start with a template and shape the result your way.</p>
+            <p className="font-sans font-semibold leading-[28px] relative shrink-0 text-[#1c1c1e] text-[24px] text-nowrap">Create images that fit real moments</p>
+            <p className="font-sans font-normal leading-[24px] relative shrink-0 text-[#5f5f66] text-[20px] w-[685px]">Professional, personal, or playful — start with a template and shape the result your way.</p>
           </div>
           <div className="content-stretch flex gap-[30px] items-start relative shrink-0">
             <Chevron>
@@ -63,7 +63,7 @@ export default function Component() {
               </Card>
               <Content text="ID Photo" text1="Clean, compliant photos for official use" />
             </div>
-            <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Passport · Visa · Resume</p>
+            <p className="font-sans font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Passport · Visa · Resume</p>
           </div>
           <div className="bg-[#fafafa] content-stretch flex flex-col h-[533px] items-start justify-between pb-[45px] pt-[25px] px-[25px] relative rounded-[24px] shrink-0" data-name="Card2">
             <div aria-hidden="true" className="absolute border border-[#ebebeb] border-solid inset-0 pointer-events-none rounded-[24px]" />
@@ -73,7 +73,7 @@ export default function Component() {
               </Card>
               <Content text="Professional Portrait" text1="A confident, natural look for your profile" />
             </div>
-            <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">LinkedIn · Personal brand</p>
+            <p className="font-sans font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">LinkedIn · Personal brand</p>
           </div>
           <div className="bg-[#fafafa] content-stretch flex flex-col h-[533px] items-start justify-between pb-[45px] pt-[25px] px-[25px] relative rounded-[24px] shrink-0" data-name="Card3">
             <div aria-hidden="true" className="absolute border border-[#ebebeb] border-solid inset-0 pointer-events-none rounded-[24px]" />
@@ -83,7 +83,7 @@ export default function Component() {
               </Card>
               <Content text="Personal Photoshoot" text1="Express your style, mood, and identity" />
             </div>
-            <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Lifestyle · Art · Self-expression</p>
+            <p className="font-sans font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Lifestyle · Art · Self-expression</p>
           </div>
           <div className="bg-[#fafafa] content-stretch flex flex-col h-[533px] items-start justify-between pb-[45px] pt-[25px] px-[25px] relative rounded-[24px] shrink-0" data-name="Card4">
             <div aria-hidden="true" className="absolute border border-[#ebebeb] border-solid inset-0 pointer-events-none rounded-[24px]" />
@@ -93,7 +93,7 @@ export default function Component() {
               </Card>
               <Content text="Pet Portrait" text1="Beautiful portraits of the ones you love" />
             </div>
-            <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Cats · Dogs · Companions</p>
+            <p className="font-sans font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Cats · Dogs · Companions</p>
           </div>
           <div className="bg-[#fafafa] content-stretch flex flex-col h-[533px] items-start justify-between pb-[45px] pt-[25px] px-[25px] relative rounded-[24px] shrink-0" data-name="Card5">
             <div aria-hidden="true" className="absolute border border-[#ebebeb] border-solid inset-0 pointer-events-none rounded-[24px]" />
@@ -103,7 +103,7 @@ export default function Component() {
               </Card>
               <Content text="Product Visuals" text1="Clean, compelling images that sell" />
             </div>
-            <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Lifestyle · Art · Self-expression</p>
+            <p className="font-sans font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Lifestyle · Art · Self-expression</p>
           </div>
           <div className="absolute flex h-[533px] items-center justify-center right-[-0.5px] top-0 w-[215px]" style={{ "--transform-inner-width": "0", "--transform-inner-height": "0" } as React.CSSProperties}>
             <div className="flex-none rotate-[270deg]">

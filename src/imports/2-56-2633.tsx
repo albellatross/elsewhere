@@ -102,7 +102,7 @@ export default function Component() {
         <div className="content-stretch flex flex-col gap-[70px] items-start relative shrink-0" data-name="text">
           <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0">
             <div className="content-stretch flex items-center justify-center relative shrink-0" data-name="title">
-              <p className="font-['Alexandria:Bold',sans-serif] font-bold leading-[72px] relative shrink-0 text-[#0b0b0b] text-[80px] text-nowrap">Rem</p>
+              <p className="font-sans font-bold leading-[72px] relative shrink-0 text-[#0b0b0b] text-[80px] text-nowrap">Rem</p>
               <div className="relative shrink-0 size-[80px]" data-name="pen">
                 <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 80 80">
                   <g clipPath="url(#clip0_1_443)" id="pen">
@@ -121,13 +121,13 @@ export default function Component() {
                   </defs>
                 </svg>
               </div>
-              <p className="font-['Alexandria:Bold',sans-serif] font-bold leading-[72px] relative shrink-0 text-[#0b0b0b] text-[80px] text-nowrap">x Reality.</p>
+              <p className="font-sans font-bold leading-[72px] relative shrink-0 text-[#0b0b0b] text-[80px] text-nowrap">x Reality.</p>
             </div>
-            <p className="font-['Alexandria:Medium',sans-serif] font-medium leading-[72px] relative shrink-0 text-[#8e8e93] text-[80px] text-nowrap">Not Identity.</p>
+            <p className="font-sans font-medium leading-[72px] relative shrink-0 text-[#8e8e93] text-[80px] text-nowrap">Not Identity.</p>
           </div>
           <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0 text-nowrap">
-            <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[28px] relative shrink-0 text-[#1c1c1e] text-[24px]">Same you. New worlds.</p>
-            <div className="font-['Alexandria:Regular',sans-serif] font-normal leading-[24px] relative shrink-0 text-[#5f5f66] text-[20px]">
+            <p className="font-sans font-semibold leading-[28px] relative shrink-0 text-[#1c1c1e] text-[24px]">Same you. New worlds.</p>
+            <div className="font-sans font-normal leading-[24px] relative shrink-0 text-[#5f5f66] text-[20px]">
               <p className="mb-0">Drop a photo in. Remix the world around you.</p>
               <p>No prompts. No face swaps. No weird AI vibes.</p>
             </div>
@@ -137,7 +137,7 @@ export default function Component() {
           <SparkleBackgroundImage>
             <path d={svgPaths.p124ef7b0} fill="var(--fill-0, white)" fillOpacity="0.9" id="Shape" />
           </SparkleBackgroundImage>
-          <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[16px] text-[rgba(255,255,255,0.9)] text-nowrap">Try it now</p>
+          <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[16px] text-[rgba(255,255,255,0.9)] text-nowrap">Try it now</p>
         </div>
       </div>
       <div className="absolute h-[50px] left-[132px] top-[45px] w-[125.179px]" data-name="logo">
@@ -168,7 +168,7 @@ export default function Component() {
           <SparkleBackgroundImage>
             <path d={svgPaths.p124ef7b0} fill="var(--fill-0, #050505)" id="Shape" />
           </SparkleBackgroundImage>
-          <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Create</p>
+          <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Create</p>
         </div>
         <div className="content-stretch flex gap-[10px] h-[44px] items-center justify-center pl-[20px] pr-[24px] py-[12px] relative rounded-[999px] shrink-0 w-[150px]" data-name="Templates button">
           <BackgroundImage>
@@ -176,7 +176,7 @@ export default function Component() {
               <path d={svgPaths.p2853cd00} fill="var(--fill-0, #050505)" id="Shape" />
             </g>
           </BackgroundImage>
-          <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Templates</p>
+          <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Templates</p>
         </div>
         <div className="content-stretch flex gap-[10px] h-[44px] items-center justify-center pl-[20px] pr-[24px] py-[12px] relative rounded-[999px] shrink-0 w-[150px]" data-name="Studio button">
           <div aria-hidden="true" className="absolute border border-[rgba(31,31,31,0.1)] border-solid inset-0 pointer-events-none rounded-[999px]" />
@@ -185,12 +185,12 @@ export default function Component() {
               <path d={svgPaths.p120bce80} fill="var(--fill-0, #050505)" id="Shape" />
             </g>
           </BackgroundImage>
-          <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Studio</p>
+          <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Studio</p>
         </div>
       </div>
       <div className="absolute content-stretch flex flex-col h-[60px] items-center justify-between left-[calc(50%+0.5px)] pb-0 pt-[10px] px-0 shadow-[0px_4px_4px_0px_rgba(255,255,255,0.7)] top-[1025px] translate-x-[-50%] w-[261px]" data-name="Scroll to explore more templates">
         <div className="absolute h-[41px] left-[calc(50%-0.5px)] opacity-90 top-[calc(50%-9.5px)] translate-x-[-50%] translate-y-[-50%] w-[260px]" style={{ backgroundImage: "url('data:image/svg+xml;utf8,<svg viewBox=\\\'0 0 260 41\\\' xmlns=\\\'http://www.w3.org/2000/svg\\\' preserveAspectRatio=\\\'none\\\'><rect x=\\\'0\\\' y=\\\'0\\\' height=\\\'100%\\\' width=\\\'100%\\\' fill=\\\'url(%23grad)\\\' opacity=\\\'1\\\'/><defs><radialGradient id=\\\'grad\\\' gradientUnits=\\\'userSpaceOnUse\\\' cx=\\\'0\\\' cy=\\\'0\\\' r=\\\'10\\\' gradientTransform=\\\'matrix(13 -3.2558e-8 6.9261e-9 2.05 130 20.873)\\\'><stop stop-color=\\\'rgba(255,255,255,1)\\\' offset=\\\'0.55939\\\'/><stop stop-color=\\\'rgba(255,255,255,0)\\\' offset=\\\'1\\\'/></radialGradient></defs></svg>')" }} />
-        <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 text-[#242424] text-[14px] text-nowrap">Scroll to explore more</p>
+        <p className="font-sans font-normal leading-[normal] relative shrink-0 text-[#242424] text-[14px] text-nowrap">Scroll to explore more</p>
         <div className="relative shrink-0 size-[32px]" data-name="Chevron">
           <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 32 32">
             <g id="Chevron">

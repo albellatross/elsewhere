@@ -305,7 +305,7 @@ export default function BeforeAfterSlider({
           animate={{ opacity: (isHovered && beforeOpacity > 0.3) ? 1 : 0 }}
           transition={{ duration: 0.2 }}
         >
-          <span className="font-['Alexandria:SemiBold',sans-serif] font-semibold text-[9px] md:text-[11px] text-[#050505] uppercase tracking-wider">
+          <span className="font-sans font-semibold text-[9px] md:text-[11px] text-[#050505] uppercase tracking-wider">
             Before
           </span>
         </motion.div>

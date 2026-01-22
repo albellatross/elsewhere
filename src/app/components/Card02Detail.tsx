@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useScrollAssist } from '../hooks/useScrollAssist';
 import { GenerationAnimation } from './figma/GenerationAnimation';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import GeneratingLottie from './GeneratingLottie';
-import { X, Upload, Key, Eye, EyeOff, Settings, Coffee, Soup, MessageCircle, Wind, Sparkles, PartyPopper, Camera, UtensilsCrossed, Sunrise, Armchair } from 'lucide-react';
+import { supabase } from '../../services/supabase';
+import { X, Upload, Key, Eye, EyeOff, Coffee, Soup, MessageCircle, Wind, Sparkles, PartyPopper, Camera, UtensilsCrossed, Sunrise, Armchair } from 'lucide-react';
 import svgPaths from "../../imports/svg-lxjhel9141";
 import svgPathsFigma from "../../imports/svg-pike97bdu9";
 import svgPathsImage from "../../imports/svg-xmejrywrxw";
@@ -201,31 +203,15 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
   const [apiUrl, setApiUrl] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showPromptModal, setShowPromptModal] = useState(false);
   const [showSafetyModal, setShowSafetyModal] = useState(false);
   const [safetyErrorMessage, setSafetyErrorMessage] = useState('');
-  const [customPromptOfficial, setCustomPromptOfficial] = useState('');
-  const [customPromptProfessional, setCustomPromptProfessional] = useState('');
-  const [tempPromptOfficial, setTempPromptOfficial] = useState('');
-  const [tempPromptProfessional, setTempPromptProfessional] = useState('');
-  // 密码保护状态
-  const [promptPassword, setPromptPassword] = useState(['', '', '', '']); // 4位密码
-  const [isPromptUnlocked, setIsPromptUnlocked] = useState(false);
-  const [passwordError, setPasswordError] = useState(false);
-  const passwordInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
-  // 参考图状态 - 每种用途都有 5 张参考图
-  const [referenceImagesOfficial, setReferenceImagesOfficial] = useState<(string | null)[]>([null, null, null, null, null]);
-  const [referenceImagesProfessional, setReferenceImagesProfessional] = useState<(string | null)[]>([null, null, null, null, null]);
-  const [tempReferenceImagesOfficial, setTempReferenceImagesOfficial] = useState<(string | null)[]>([null, null, null, null, null]);
-  const [tempReferenceImagesProfessional, setTempReferenceImagesProfessional] = useState<(string | null)[]>([null, null, null, null, null]);
   const [deploymentId, setDeploymentId] = useState('');
   const [showConsole, setShowConsole] = useState(false);
   const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
-  const [fluxStrength, setFluxStrength] = useState(0.15);  // Default strength (Official: 0.15, Professional: 0.25)
   const [fluxGuidanceScale, setFluxGuidanceScale] = useState(7.5);  // 引导强度
-  const [referenceStrength, setReferenceStrength] = useState(0.6);  // 参考图影响权重：0.6 (STYLE ONLY)
   const [apiType, setApiType] = useState<'auto' | 'flux' | 'openai'>('auto'); // API 类型选择
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { scrollContainerRef, triggerScrollAssist } = useScrollAssist();
   
   // API 版本固定值
   const apiVersion = '2025-04-01-preview';
@@ -261,45 +247,33 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
   // 从 localStorage 加载 API 配置和自定义 prompt
   useEffect(() => {
     const savedGlobalApiKey = localStorage.getItem('global_api_key');
+    const savedGlobalApiUrl = localStorage.getItem('global_api_url');
+    const savedGlobalDeploymentId = localStorage.getItem('global_api_deployment_id');
+    const savedGlobalApiType = localStorage.getItem('global_api_type') as 'auto' | 'flux' | 'openai' | null;
     const savedApiKey = localStorage.getItem('pet_api_key');
     const savedApiUrl = localStorage.getItem('pet_api_url');
     const savedDeploymentId = localStorage.getItem('pet_deployment_id');
-    const savedPromptOfficial = localStorage.getItem('pet_prompt_official');
-    const savedPromptProfessional = localStorage.getItem('pet_prompt_professional');
     const savedApiType = localStorage.getItem('pet_api_type') as 'auto' | 'flux' | 'openai' | null;
-    const savedRefImagesOfficial = localStorage.getItem('pet_ref_images_official');
-    const savedRefImagesProfessional = localStorage.getItem('pet_ref_images_professional');
     
-    if (savedGlobalApiKey) {
-      setApiKey(savedGlobalApiKey);
-    } else if (savedApiKey) {
-      setApiKey(savedApiKey);
-    }
-    if (savedApiUrl) setApiUrl(savedApiUrl);
-    if (savedDeploymentId) setDeploymentId(savedDeploymentId);
-    if (savedPromptOfficial) setCustomPromptOfficial(savedPromptOfficial);
-    if (savedPromptProfessional) setCustomPromptProfessional(savedPromptProfessional);
-    if (savedApiType) setApiType(savedApiType);
-    if (savedRefImagesOfficial) {
-      try {
-        const parsed = JSON.parse(savedRefImagesOfficial);
-        setReferenceImagesOfficial(parsed);
-      } catch (e) {
-        console.error('Failed to parse saved reference images (official)');
-      }
-    }
-    if (savedRefImagesProfessional) {
-      try {
-        const parsed = JSON.parse(savedRefImagesProfessional);
-        setReferenceImagesProfessional(parsed);
-      } catch (e) {
-        console.error('Failed to parse saved reference images (professional)');
-      }
-    }
+    const resolvedApiKey = savedGlobalApiKey ?? savedApiKey ?? '';
+    const resolvedApiUrl = savedGlobalApiUrl ?? savedApiUrl ?? '';
+    const resolvedDeploymentId = savedGlobalDeploymentId ?? savedDeploymentId ?? '';
+    const resolvedApiType = savedGlobalApiType ?? savedApiType ?? null;
 
-    const savedFluxStrength = localStorage.getItem('pet_flux_strength');
+    if (resolvedApiKey) setApiKey(resolvedApiKey);
+    if (resolvedApiUrl) setApiUrl(resolvedApiUrl);
+    if (resolvedDeploymentId) setDeploymentId(resolvedDeploymentId);
+    if (resolvedApiType) setApiType(resolvedApiType);
+
+    if (!savedGlobalApiKey && savedApiKey) localStorage.setItem('global_api_key', savedApiKey);
+    if (!savedGlobalApiUrl && savedApiUrl) localStorage.setItem('global_api_url', savedApiUrl);
+    if (!savedGlobalDeploymentId && savedDeploymentId) {
+      localStorage.setItem('global_api_deployment_id', savedDeploymentId);
+    }
+    if (!savedGlobalApiType && savedApiType) localStorage.setItem('global_api_type', savedApiType);
+
+
     const savedFluxGuidanceScale = localStorage.getItem('pet_flux_guidance_scale');
-    if (savedFluxStrength) setFluxStrength(parseFloat(savedFluxStrength));
     if (savedFluxGuidanceScale) setFluxGuidanceScale(parseFloat(savedFluxGuidanceScale));
   }, []);
 
@@ -311,91 +285,14 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
         setUploadedImage(e.target?.result as string);
         setGeneratedImage(null);
         setErrorMessage(null);
+        // 触发滚动辅助
+        setTimeout(triggerScrollAssist, 300);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  // 处理密码输入
-  const handlePasswordInput = (index: number, value: string) => {
-    // 只允许数字
-    if (value && !/^\d$/.test(value)) return;
-    
-    const newPassword = [...promptPassword];
-    newPassword[index] = value;
-    setPromptPassword(newPassword);
-    setPasswordError(false);
-    
-    // 自动跳到下一个输入框
-    if (value && index < 3) {
-      passwordInputRefs[index + 1].current?.focus();
-    }
-    
-    // 如果输入了4位，自动验证
-    if (newPassword.every(digit => digit !== '')) {
-      const passwordString = newPassword.join('');
-      if (passwordString === '0112') {
-        setIsPromptUnlocked(true);
-        setPasswordError(false);
-      } else {
-        setPasswordError(true);
-        // 清空密码并重置焦点
-        setTimeout(() => {
-          setPromptPassword(['', '', '', '']);
-          setPasswordError(false);
-          passwordInputRefs[0].current?.focus();
-        }, 1000);
-      }
-    }
-  };
   
-  // 处理密码输入框的退格键
-  const handlePasswordKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !promptPassword[index] && index > 0) {
-      passwordInputRefs[index - 1].current?.focus();
-    }
-  };
-  
-  // 重置密码状态（关闭弹窗时）
-  const resetPasswordState = () => {
-    setPromptPassword(['', '', '', '']);
-    setIsPromptUnlocked(false);
-    setPasswordError(false);
-  };
-
-  // 处理参考��上传
-  const handleReferenceImageUpload = (index: number, isOfficial: boolean) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageData = e.target?.result as string;
-        if (isOfficial) {
-          const newImages = [...tempReferenceImagesOfficial];
-          newImages[index] = imageData;
-          setTempReferenceImagesOfficial(newImages);
-        } else {
-          const newImages = [...tempReferenceImagesProfessional];
-          newImages[index] = imageData;
-          setTempReferenceImagesProfessional(newImages);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // 删除参考图
-  const removeReferenceImage = (index: number, isOfficial: boolean) => {
-    if (isOfficial) {
-      const newImages = [...tempReferenceImagesOfficial];
-      newImages[index] = null;
-      setTempReferenceImagesOfficial(newImages);
-    } else {
-      const newImages = [...tempReferenceImagesProfessional];
-      newImages[index] = null;
-      setTempReferenceImagesProfessional(newImages);
-    }
-  };
 
   // 获取背景颜色的简单描述（用于 prompt）
   const getBackgroundColorName = (color: BackgroundColor): string => {
@@ -454,31 +351,41 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
   // 构建简洁的 Flux 图生图 prompt
   // ✨ Flux 模型需要简短、描述性的 prompt，而非长指令
   const buildPrompt = (): string => {
-    const backgroundColorName = getBackgroundColorName(backgroundColor);
     const backgroundInstruction = getBackgroundInstruction();
-    
-    // 获取当前用途的参考图
-    const currentReferenceImages = photoPurpose === 'official' 
-      ? referenceImagesOfficial 
-      : referenceImagesProfessional;
-    const validReferenceImages = currentReferenceImages.filter(img => img !== null);
-    const hasReferenceImages = validReferenceImages.length > 0;
-    
-    // ✨ Prompt 策略：
-    // 1. 明确主图优先级（MUST PRESERVE）
-    // 2. 说明参考图用途（ONLY for composition/lighting/style）
-    // 3. 否定指令（DO NOT change the person）
-    // 4. 简洁描述期望效果
-    if (hasReferenceImages) {
-      return `CRITICAL: The INPUT IMAGE is the SOLE source for the person's face and identity. 
-      The REFERENCE IMAGES are ONLY for style, lighting, and background atmosphere. 
-      DO NOT use the face, person, or identity from the reference images. 
-      Completely IGNORE the people in the reference images. 
-      Transfer ONLY the visual style (colors, lighting, texture) from the reference images to the input person.
-      Professional ID photo. ${backgroundInstruction}`;
-    } else {
-      return `Professional ID photo of the person in the input image. ${backgroundInstruction} Clean, professional studio lighting. Preserve all facial features and identity.`;
-    }
+    return `Professional ID photo of the person in the input image. ${backgroundInstruction} Clean, professional studio lighting. Preserve all facial features and identity.`;
+  };
+
+  /**
+   * ⚡️ Optimization: Compress and resize image before upload
+   */
+  const compressImage = async (imageSrc: string, maxWidth = 1024, maxHeight = 1024): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width; width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height; height = maxHeight;
+          }
+        }
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error("Canvas context failed")); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob); else reject(new Error("Compression failed"));
+        }, 'image/jpeg', 0.8);
+      };
+      img.onerror = (e) => reject(new Error("Failed to load image for compression"));
+      img.src = imageSrc;
+    });
   };
 
   const handleGenerate = async () => {
@@ -488,21 +395,32 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
     setErrorMessage(null);
     
     try {
-      // 获取当前用途的参考图
-      const currentReferenceImages = photoPurpose === 'official' 
-        ? referenceImagesOfficial 
-        : referenceImagesProfessional;
+      addLog('🚀 Starting optimized generation...');
       
-      const validReferenceImages = currentReferenceImages.filter(img => img !== null);
+      // ✅ Fix: Define validReferenceImages before use
+      const validReferenceImages: string[] = [];
+      const purposeImages: Record<string, string> = {
+        official: photoPurposeOfficialUrl,
+        professional: photoPurposeProfessionalUrl
+      };
       
-      if (validReferenceImages.length > 0) {
-        addLog(`📷 Found ${validReferenceImages.length} reference images`);
-        addLog('✅ Reference images will be included as style guidance (low influence)');
-        addLog('💡 Main photo input will take priority in generation');
-      } else {
-        addLog('📷 No reference images provided');
+      if (photoPurpose && purposeImages[photoPurpose]) {
+        validReferenceImages.push(purposeImages[photoPurpose]);
       }
+
+      const imageBlob = await compressImage(uploadedImage);
       
+      // Convert compressed blob to base64 for Flux/JSON APIs
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve) => {
+        reader.onloadend = () => {
+          const res = reader.result as string;
+          resolve(res.includes('base64,') ? res.split('base64,')[1] : res);
+        };
+        reader.readAsDataURL(imageBlob);
+      });
+      const compressedBase64 = await base64Promise;
+
       // 如果没有配置 API，直接使用 Demo Mode
       if (!apiKey || !apiUrl) {
         console.log('⚠️⚠️⚠️ Using Demo Mode (no API configured)...');
@@ -541,29 +459,49 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
         addLog('🎯 Background Mode: COLOR TONE - Will add color grading while keeping existing background');
       }
       
-      // 根据照片类型选择对应的 prompt
-      let prompt = photoPurpose === 'official' ? customPromptOfficial : customPromptProfessional;
-      const backgroundInstruction = getBackgroundInstruction();
-      const hasReferenceImages = validReferenceImages.length > 0;
-      
-      // ✨ 如果用户提供了自定义 prompt，在后面添加背景颜色描述和主图优先说明
-      if (prompt && prompt.trim()) {
-        addLog('📝 Using custom prompt with background instruction');
-        addLog('📄 Original custom prompt:', prompt.trim());
+      // 🔄 尝试从后端获取动态 Prompt (Supabase Edge Function)
+      let finalPrompt = buildPrompt();
+      try {
+        const featureKey = 'create_id_photo';
+        const variantKey = photoPurpose || 'default';
         
-        // 如果有参考图，在 prompt 中明确说明主图优先
-        const priorityNote = hasReferenceImages 
-          ? ' CRITICAL: The INPUT IMAGE is the SOLE source for the person. Reference images are ONLY for style/lighting/vibe. IGNORE the faces in reference images. DO NOT blend identities.' 
-          : '';
+        addLog(`🔄 Syncing latest prompt from backend for ${featureKey}/${variantKey}...`);
         
-        prompt = `${prompt.trim()} ${backgroundInstruction}${priorityNote}`;
-        addLog('📄 Final prompt (custom + background + priority):', prompt);
-      } else {
-        // 如果没有自定义 prompt，使用默认的简短 prompt
-        prompt = buildPrompt();
-        addLog('📝 Using default optimized prompt for Flux image-to-image');
-        addLog('📄 Final prompt (default):', prompt);
+        const { data: planData, error: planError } = await supabase.functions.invoke('generate-image', {
+          body: {
+            feature_key: featureKey,
+            variant_key: variantKey,
+            provider_key: 'chatgpt_image',
+            return_payload_only: true,
+            user_inputs: {
+              purpose: photoPurpose,
+              background_color: backgroundColor
+            }
+          }
+        });
+
+        if (planData?.request?.body_data?.prompt) {
+          finalPrompt = planData.request.body_data.prompt;
+          addLog('✅ Backend prompt resolved successfully');
+          
+          // 如果后端返回了参考图片，也同步更新
+          if (planData.request.body_data.reference_images && Array.isArray(planData.request.body_data.reference_images)) {
+            addLog(`🖼️ Backend provided ${planData.request.body_data.reference_images.length} reference images`);
+            // 将后端参考图合并到有效参考图中
+            planData.request.body_data.reference_images.forEach((url: string) => {
+              if (!validReferenceImages.includes(url)) {
+                validReferenceImages.push(url);
+              }
+            });
+          }
+        }
+      } catch (err) {
+        addLog('⚠️ Backend prompt sync failed, using local fallback');
+        console.error('Backend sync error:', err);
       }
+
+      const prompt = finalPrompt;
+      addLog('📝 Final prompt used:', prompt);
       
       addLog('📝 Prompt length', prompt.length + ' characters');
 
@@ -762,20 +700,8 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
         const modelName = deploymentId || 'image editing model';
         addLog('🔧 Using multipart/form-data for image editing (' + modelName + ')');
         
-        // 将 base64 转换为 Blob
-        const base64Data = uploadedImage.includes('base64,') 
-          ? uploadedImage.split('base64,')[1] 
-          : uploadedImage;
-        
-        // 检测图片格式
-        const mimeType = uploadedImage.match(/data:([^;]+);/)?.[1] || 'image/png';
-        const byteCharacters = atob(base64Data);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const imageBlob = new Blob([byteArray], { type: mimeType });
+        // ⚡️ OPTIMIZATION: Use already compressed imageBlob
+        const mimeType = imageBlob.type || 'image/jpeg';
         
         // 创建 FormData
         const formData = new FormData();
@@ -783,7 +709,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
         
         // gpt-image 使用 image[]（数组格式），DALL-E 2 使用 image
         if (isGptImage) {
-          formData.append('image[]', imageBlob, 'main_photo.png');  // 主图：第一张图片（优先保留）
+          formData.append('image[]', imageBlob, 'main_photo.jpg');  // 主图：第一张图片（优先保留）
           addLog('📷 Main photo added as first image (will be preserved)');
           
           // 添加参考图片到 gpt-image 请求（仅作为风格参考）
@@ -793,21 +719,31 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
             for (let i = 0; i < validReferenceImages.length; i++) {
               const refImg = validReferenceImages[i];
               if (refImg) {
-                // 将参考图转换为 Blob
-                const refBase64Data = refImg.includes('base64,') 
-                  ? refImg.split('base64,')[1] 
-                  : refImg;
-                const refMimeType = refImg.match(/data:([^;]+);/)?.[1] || 'image/png';
-                const refByteCharacters = atob(refBase64Data);
-                const refByteNumbers = new Array(refByteCharacters.length);
-                for (let j = 0; j < refByteCharacters.length; j++) {
-                  refByteNumbers[j] = refByteCharacters.charCodeAt(j);
+                // ✨ 修复：只有当它是 data URL 或 base64 时才尝试解码
+                if (refImg.startsWith('data:') || !refImg.startsWith('http')) {
+                  try {
+                    const refBase64Data = refImg.includes('base64,') 
+                      ? refImg.split('base64,')[1] 
+                      : refImg;
+                    const refMimeType = refImg.match(/data:([^;]+);/)?.[1] || 'image/png';
+                    const refByteCharacters = atob(refBase64Data);
+                    const refByteNumbers = new Array(refByteCharacters.length);
+                    for (let j = 0; j < refByteCharacters.length; j++) {
+                      refByteNumbers[j] = refByteCharacters.charCodeAt(j);
+                    }
+                    const refByteArray = new Uint8Array(refByteNumbers);
+                    const refBlob = new Blob([refByteArray], { type: refMimeType });
+                    
+                    formData.append('image[]', refBlob, `style_reference_${i + 1}.png`);
+                    addLog(`  ✅ Style reference ${i + 1} (Base64): ${refBlob.size} bytes`);
+                  } catch (e) {
+                    addLog(`  ⚠️ Failed to decode reference image ${i + 1}, skipping...`);
+                  }
+                } else {
+                  // 如果是网络 URL，由于 multipart 无法直接带 URL，
+                  // 在 gpt-image 策略下我们暂时跳过
+                  addLog(`  ℹ️ Style reference ${i + 1} is a URL (skipped for multipart)`);
                 }
-                const refByteArray = new Uint8Array(refByteNumbers);
-                const refBlob = new Blob([refByteArray], { type: refMimeType });
-                
-                formData.append('image[]', refBlob, `style_reference_${i + 1}.png`);
-                addLog(`  ✅ Style reference ${i + 1}: ${refBlob.size} bytes`);
               }
             }
           }
@@ -855,12 +791,25 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
           }
         }
         
-        // 发送 multipart 请求
-        response = await fetch(fullApiUrl, {
-          method: 'POST',
-          headers: headers,  // 不包含 Content-Type，让浏览器自动设置
-          body: formData
-        });
+        // ⚡️ SPEED OPTIMIZATION: Add timeout to prevent "5 minute" hangs
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
+        try {
+          // 发送 multipart 请求
+          response = await fetch(fullApiUrl, {
+            method: 'POST',
+            headers: headers,  // 不包含 Content-Type，让浏览器自动设置
+            body: formData,
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+        } catch (err: any) {
+          if (err.name === 'AbortError') {
+            throw new Error('Request timed out (2 minutes). The AI provider is taking too long. Please try again or check your API settings.');
+          }
+          throw err;
+        }
         
       } else {
         // 决定使用哪种 JSON API 格式
@@ -883,60 +832,40 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
           // Azure AI Services (Flux) - 使用 Flux 特定的参数格式
           // Flux 支持 image-to-image 生成
           
-          // 将上传的图片转换为纯 base64（去掉 data:image/xxx;base64, 前缀）
-          const base64Image = uploadedImage.includes('base64,') 
-            ? uploadedImage.split('base64,')[1] 
-            : uploadedImage;
+          // ⚡️ OPTIMIZATION: Use already compressed base64
+          const base64Image = compressedBase64;
+          const trimmedDeploymentId = deploymentId?.trim() || '';
+          const fluxModelFallback = 'Flux.1-schnell';
+          const isFluxModelName = trimmedDeploymentId ? /flux/i.test(trimmedDeploymentId) : false;
+          const resolvedFluxModel = isFluxModelName ? trimmedDeploymentId : fluxModelFallback;
+          if (trimmedDeploymentId && !isFluxModelName) {
+            addLog(`⚠️ Deployment name "${trimmedDeploymentId}" is not a Flux model. Using default Flux.1-schnell.`);
+          }
+          const isSchnell = resolvedFluxModel.toLowerCase().includes('schnell');
           
           console.log('=== IMAGE DATA DEBUG ===');
-          console.log('Original image length:', uploadedImage.length);
-          console.log('Base64 image length:', base64Image.length);
-          console.log('Image starts with:', uploadedImage.substring(0, 50));
-          console.log('Base64 starts with:', base64Image.substring(0, 50));
+          console.log('Original image length:', uploadedImage ? uploadedImage.length : 'N/A');
+          console.log('Compressed Base64 length:', base64Image.length);
           console.log('========================');
           
-          addLog('📷 Image data prepared for API');
+          addLog('📷 Compressed image data prepared for API');
           addLog('Base64 length', base64Image.length);
-          
-          // 处理参考图片：将参考图转换为 base64 数组
-          const referenceBase64Images: string[] = [];
-          if (validReferenceImages.length > 0) {
-            addLog(`🖼️ Processing ${validReferenceImages.length} reference images for API`);
-            for (let i = 0; i < validReferenceImages.length; i++) {
-              const refImg = validReferenceImages[i];
-              if (refImg) {
-                const refBase64 = refImg.includes('base64,') 
-                  ? refImg.split('base64,')[1] 
-                  : refImg;
-                referenceBase64Images.push(refBase64);
-                addLog(`  ✅ Reference image ${i + 1}: ${refBase64.length} bytes`);
-              }
-            }
-          }
           
           // Flux 图生图请求体
           // Flux API 使用 input_image 参数（不是 image）
+          
           requestBody = {
-            model: "Flux.2-pro",  // Azure AI Services 需要 model 参数
+            model: resolvedFluxModel,  // Default to Flux.1-schnell when invalid
             prompt: prompt,
             input_image: base64Image,  // ✅ Flux API 使用 input_image 参数（主图 - 优先保留）
-            width: 896,
-            height: 1152,
-            num_inference_steps: 40,
-            guidance_scale: fluxGuidanceScale,  // 可调节：控制对 prompt 的遵循程度
-            strength: photoPurpose === 'professional' ? 0.38 : 0.15,  // ⚠️ professional用0.38产生更明显的优化效果，official用0.15完全替换背景
+            // ⚡️ SPEED OPTIMIZATION: 768x1024 is faster than 896x1152
+            width: 768,
+            height: 1024,
+            num_inference_steps: isSchnell ? 4 : 20,  // ⚡️ Schnell needs only 4 steps
+            guidance_scale: isSchnell ? 1.0 : fluxGuidanceScale, 
+            strength: photoPurpose === 'professional' ? 0.38 : 0.15,
             seed: Math.floor(Math.random() * 1000000)
           };
-          
-          // 如果有参考图片，添加到请求体中（作为风格参考，中等影响）
-          if (referenceBase64Images.length > 0) {
-            requestBody.reference_images = referenceBase64Images;
-            requestBody.reference_strength = referenceStrength;  // ⚠️ 参考图影响权重：0.3 = 中等参考强度
-            addLog(`✅ Added ${referenceBase64Images.length} reference images with moderate strength (${referenceStrength})`);
-            addLog(`💡 IDENTITY ANCHOR: Input image is the source of truth for the face`);
-            addLog(`💡 STYLE ONLY: Reference images only affect lighting/composition`);
-          }
-          
           console.log('=== FLUX IMAGE-TO-IMAGE REQUEST ===');
           console.log('Model:', requestBody.model);
           console.log('Prompt length:', prompt.length);
@@ -944,20 +873,12 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
           console.log('input_image parameter exists:', 'input_image' in requestBody);
           console.log('Image data length:', base64Image.length);
           console.log('Image first 100 chars:', base64Image.substring(0, 100));
-          console.log('Reference images count:', referenceBase64Images.length);
-          if (referenceBase64Images.length > 0) {
-            console.log('Reference images lengths:', referenceBase64Images.map(img => img.length + ' bytes'));
-            console.log('Reference strength (影响权重):', requestBody.reference_strength || 'Not set');
-          }
           console.log('Main image strength:', requestBody.strength, photoPurpose === 'professional' ? '(professional: 0.38 for noticeable enhancement)' : '(official: 0.15 for background replacement)');
           console.log('Guidance scale:', requestBody.guidance_scale);
           console.log('Background color:', backgroundColor);
           console.log('Full request body:', JSON.stringify({
             ...requestBody,
             input_image: '[BASE64_DATA_' + base64Image.length + '_BYTES]',
-            reference_images: referenceBase64Images.length > 0 
-              ? referenceBase64Images.map((_, idx) => `[REF_IMAGE_${idx + 1}]`)
-              : undefined,
             prompt: prompt  // 显示完整 prompt
           }, null, 2));
           console.log('===================================');
@@ -967,14 +888,6 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
           addLog('📝 Prompt', prompt);  // 添加完整 prompt 到日志
           addLog('📊 input_image base64 length', base64Image.length);
           addLog('📷 Main photo (primary)', 'Strength: ' + requestBody.strength + (photoPurpose === 'professional' ? ' (Professional: noticeable enhancement)' : ' (Official: background replacement)'));
-          if (referenceBase64Images.length > 0) {
-            addLog('🖼️ Reference images', `${referenceBase64Images.length} images (STYLE ONLY)`);
-            addLog('📉 Reference strength', requestBody.reference_strength + ' (low = minimal influence)');
-            referenceBase64Images.forEach((img, idx) => {
-              addLog(`  • Reference ${idx + 1}`, `${img.length} bytes`);
-            });
-            addLog('🔒 IDENTITY LOCK', 'Main image face is preserved. Refs are for vibe only.');
-          }
           addLog('💪 Main image strength', requestBody.strength + (photoPurpose === 'professional' ? ' (Professional: noticeable enhancement)' : ' (Official: background replacement)'));
           addLog('🎯 Guidance scale', requestBody.guidance_scale);
           addLog('🎨 Background', backgroundColor);
@@ -988,11 +901,11 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
           requestBody = {
             prompt: prompt,
             n: 1,
-            size: "1024x1536"
+            size: "1024x1024" // ⚡️ Speed Optimization: 1024x1536 -> 1024x1024
           };
           
           // Add model parameter only if it's a valid OpenAI model name
-          const validOpenAIModels = ['dall-e-2', 'dall-e-3', 'gpt-image-1', 'gpt-image-1-mini'];
+          const validOpenAIModels = ['dall-e-2', 'dall-e-3', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-1-mini'];
           if (deploymentId && validOpenAIModels.includes(deploymentId.toLowerCase())) {
             requestBody.model = deploymentId;
             addLog('🤖 Using model', deploymentId);
@@ -1010,12 +923,25 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
         console.log('Image base64 length:', requestBody.image ? requestBody.image.length : 'N/A');
         console.log('================================');
         
-        // 调用 Azure AI API 生成图片 (JSON 格式)
-        response = await fetch(fullApiUrl, {
-          method: 'POST',
-          headers: headers,
-          body: JSON.stringify(requestBody)
-        });
+        // ⚡️ SPEED OPTIMIZATION: Add timeout to prevent "5 minute" hangs
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
+        try {
+          // 调用 Azure AI API 生成图片 (JSON 格式)
+          response = await fetch(fullApiUrl, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(requestBody),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+        } catch (err: any) {
+          if (err.name === 'AbortError') {
+            throw new Error('Request timed out (2 minutes). The AI provider is taking too long. Please try again or check your API settings.');
+          }
+          throw err;
+        }
       }
 
       console.log('Azure API Response Status:', response.status);
@@ -1197,6 +1123,8 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
       setErrorMessage(errorMsg);
     } finally {
       setIsGenerating(false);
+      // 成功生成后触发滚动辅助，展示可能出现的历史记录或操作按钮
+      setTimeout(triggerScrollAssist, 500);
     }
   };
 
@@ -1366,10 +1294,10 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
 
             {/* 标题 */}
             <div className="flex flex-col gap-1 min-w-0 flex-1">
-              <h1 className="font-['Alexandria',sans-serif] font-bold text-base md:text-xl text-[#050505] truncate tracking-tight">
+              <h1 className="font-sans font-bold text-base md:text-xl text-[#050505] truncate tracking-tight">
                 Product Visuals
               </h1>
-              <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666] truncate">
+              <p className="font-sans font-normal text-xs text-[#666] truncate">
                 Clean, compelling images that sell.
               </p>
             </div>
@@ -1383,48 +1311,9 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
               className="flex items-center gap-2.5 px-5 py-2.5 bg-white border border-[#e5e5e5] rounded-xl hover:bg-[#fafafa] hover:border-[#d4d4d4] hover:shadow-sm active:scale-[0.98] transition-all"
             >
               <Key className="w-4 h-4 text-[#666]" />
-              <span className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
+              <span className="font-sans font-semibold text-sm text-[#050505]">
                 API key
               </span>
-            </button>
-
-            {/* Prompt 设置按钮 */}
-            <button 
-              onClick={() => {
-                setTempPromptOfficial(customPromptOfficial);
-                setTempPromptProfessional(customPromptProfessional);
-                setTempReferenceImagesOfficial([...referenceImagesOfficial]);
-                setTempReferenceImagesProfessional([...referenceImagesProfessional]);
-                setShowPromptModal(true);
-              }}
-              className="flex items-center gap-2.5 px-5 py-2.5 bg-white border border-[#e5e5e5] rounded-xl hover:bg-[#fafafa] hover:border-[#d4d4d4] hover:shadow-sm active:scale-[0.98] transition-all"
-            >
-              <Settings className="w-4 h-4 text-[#666]" />
-              <span className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
-                Prompt
-              </span>
-            </button>
-
-            {/* Console 调试按钮 */}
-            <button 
-              onClick={() => setShowConsole(!showConsole)}
-              className={`flex items-center gap-2.5 px-5 py-2.5 border rounded-xl hover:shadow-sm active:scale-[0.98] transition-all ${
-                showConsole 
-                  ? 'bg-[#333] border-[#333] text-white' 
-                  : 'bg-white border-[#e5e5e5] hover:bg-[#fafafa] hover:border-[#d4d4d4]'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span className={`font-['Alexandria',sans-serif] font-semibold text-sm ${showConsole ? 'text-white' : 'text-[#050505]'}`}>
-                Console
-              </span>
-              {consoleLogs.length > 0 && (
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${showConsole ? 'bg-white text-[#333]' : 'bg-[#333] text-white'}`}>
-                  {consoleLogs.length}
-                </span>
-              )}
             </button>
           </div>
         </div>
@@ -1433,7 +1322,10 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
       {/* 主内容区域 */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
         {/* 左侧控制面板 */}
-        <div className="w-full lg:w-[420px] xl:w-[480px] bg-white overflow-visible lg:overflow-y-auto lg:h-full border-b lg:border-b-0 lg:border-r border-[#e5e5e5] scrollbar-subtle">
+        <div 
+          ref={scrollContainerRef}
+          className="w-full lg:w-[420px] xl:w-[480px] bg-white overflow-visible lg:overflow-y-auto lg:h-full border-b lg:border-b-0 lg:border-r border-[#e5e5e5]"
+        >
           <div className="p-3 sm:p-3.5 md:p-4 lg:p-5">
             <div className="flex flex-col gap-6 md:gap-8 lg:gap-10 max-w-md lg:max-w-none mx-auto">
               {/* 1. PHOTO INPUT */}
@@ -1444,7 +1336,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                       <path d={svgPathsFigma.p8fd1770} fill="#242424" />
                     </svg>
                   </div>
-                  <ol className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505] uppercase list-decimal" start={1}>
+                  <ol className="font-sans font-semibold text-sm text-[#050505] uppercase list-decimal" start={1}>
                     <li className="list-inside ms-1">
                       <span>photo input</span>
                     </li>
@@ -1480,10 +1372,10 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                         </svg>
                       </div>
                       <div className="flex flex-col gap-1.5 text-center">
-                        <p className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
+                        <p className="font-sans font-semibold text-sm text-[#050505]">
                           Upload Photo
                         </p>
-                        <p className="font-['Alexandria',sans-serif] font-medium text-xs text-[#999]">
+                        <p className="font-sans font-medium text-xs text-[#999]">
                           Face should be clearly visible
                         </p>
                       </div>
@@ -1500,7 +1392,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                       <path d={svgPathsFigma.p1f995572} fill="#242424" />
                     </svg>
                   </div>
-                  <ol className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505] uppercase list-decimal" start={2}>
+                  <ol className="font-sans font-semibold text-sm text-[#050505] uppercase list-decimal" start={2}>
                     <li className="list-inside ms-1">
                       <span>Photo Purpose</span>
                     </li>
@@ -1508,12 +1400,14 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                 </div>
 
                 {/* 照片用途选项 - 2x2 网格 */}
-              <div className="grid grid-cols-2 gap-x-0.5 gap-y-2.5 sm:gap-y-3 md:gap-y-3.5 w-full mx-auto justify-items-stretch">
+                <div className="w-[70%] mx-auto">
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-3.5 sm:gap-y-4 md:gap-y-4.5 w-full mx-auto justify-items-stretch">
                   {/* Official submission */}
                   <button
                     onClick={() => {
                       setPhotoPurpose('official');
                       setBackgroundColor('white'); // 默认选择白色
+                      triggerScrollAssist();
                     }}
                     className={`relative w-full aspect-[3/4] rounded-2xl overflow-hidden transition-all group ${
                       photoPurpose === 'official' 
@@ -1524,7 +1418,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                     <ImageWithFallback 
                       src={photoPurposeOfficialUrl} 
                       alt="Official submission" 
-                      className={`absolute inset-0 w-full h-full max-w-none object-cover transition-transform duration-300 group-hover:scale-105 ${photoPurpose === 'official' ? 'scale-[1.06]' : ''}`} 
+                      className={`absolute inset-0 w-full h-full max-w-none object-cover transition-transform duration-300 group-hover:scale-105 group-hover:blur-[1px] ${photoPurpose === 'official' ? 'scale-[1.06]' : ''}`} 
                     />
                     <div 
                       aria-hidden="true" 
@@ -1532,11 +1426,11 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                     />
                     
                     {/* Hover 信息遮罩 */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center px-4 text-center">
-                      <p className="font-['Alexandria',sans-serif] font-bold text-sm text-white mb-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center px-4 text-center">
+                      <p className="font-sans font-bold text-sm text-white mb-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
                         Official Submission
                       </p>
-                      <p className="font-['Alexandria',sans-serif] font-medium text-xs text-white/90 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
+                      <p className="font-sans font-medium text-[11px] text-white/85 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
                         Strict, neutral, compliance-focused
                       </p>
                     </div>
@@ -1556,6 +1450,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                     onClick={() => {
                       setPhotoPurpose('professional');
                       setBackgroundColor('none'); // 默认选择"空"选项
+                      triggerScrollAssist();
                     }}
                     className={`relative w-full aspect-[3/4] rounded-2xl overflow-hidden transition-all group ${
                       photoPurpose === 'professional' 
@@ -1566,7 +1461,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                     <ImageWithFallback 
                       src={photoPurposeProfessionalUrl} 
                       alt="Professional use" 
-                      className={`absolute inset-0 w-full h-full max-w-none object-cover transition-transform duration-300 group-hover:scale-105 ${photoPurpose === 'professional' ? 'scale-[1.06]' : ''}`} 
+                      className={`absolute inset-0 w-full h-full max-w-none object-cover transition-transform duration-300 group-hover:scale-105 group-hover:blur-[1px] ${photoPurpose === 'professional' ? 'scale-[1.06]' : ''}`} 
                     />
                     <div 
                       aria-hidden="true" 
@@ -1574,11 +1469,11 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                     />
                     
                     {/* Hover 信息遮罩 */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center px-4 text-center">
-                      <p className="font-['Alexandria',sans-serif] font-bold text-sm text-white mb-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center px-4 text-center">
+                      <p className="font-sans font-bold text-sm text-white mb-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
                         Professional Use
                       </p>
-                      <p className="font-['Alexandria',sans-serif] font-medium text-xs text-white/90 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
+                      <p className="font-sans font-medium text-[11px] text-white/85 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
                         Polished, confident, workplace-ready
                       </p>
                     </div>
@@ -1598,6 +1493,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                     onClick={() => {
                       setPhotoPurpose('studio');
                       setBackgroundColor('grey');
+                      triggerScrollAssist();
                     }}
                     className={`relative w-full aspect-[3/4] rounded-2xl overflow-hidden transition-all group md:-translate-y-1 ${
                       photoPurpose === 'studio' 
@@ -1608,18 +1504,18 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                     <img 
                       src={imgImage1} 
                       alt="Studio portrait" 
-                      className={`absolute inset-0 w-full h-[124.49%] max-w-none object-cover transition-transform duration-300 group-hover:scale-105 ${photoPurpose === 'studio' ? 'scale-[1.06]' : ''} translate-y-[-4px]`} 
+                      className={`absolute inset-0 w-full h-[124.49%] max-w-none object-cover transition-transform duration-300 group-hover:scale-105 group-hover:blur-[1px] ${photoPurpose === 'studio' ? 'scale-[1.06]' : ''} translate-y-[-4px]`} 
                       style={{ top: '1.83%' }}
                     />
                     <div 
                       aria-hidden="true" 
                       className="absolute border-[2.5px] border-solid border-white inset-0 rounded-2xl pointer-events-none" 
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/55 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center px-4 text-center">
-                      <p className="font-['Alexandria',sans-serif] font-bold text-sm text-white mb-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/45 to-black/65 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center px-4 text-center">
+                      <p className="font-sans font-extrabold text-base text-white mb-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
                         Studio Portrait
                       </p>
-                      <p className="font-['Alexandria',sans-serif] font-medium text-xs text-white/90 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
+                      <p className="font-sans font-medium text-[11px] text-white/85 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
                         Soft light, calm companion vibe
                       </p>
                     </div>
@@ -1637,6 +1533,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                     onClick={() => {
                       setPhotoPurpose('outdoor');
                       setBackgroundColor('blue');
+                      triggerScrollAssist();
                     }}
                     className={`relative w-full aspect-[3/4] rounded-2xl overflow-hidden transition-all group md:-translate-y-1 ${
                       photoPurpose === 'outdoor' 
@@ -1647,18 +1544,18 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                     <img 
                       src={imgImage2} 
                       alt="Outdoor portrait" 
-                      className={`absolute inset-0 w-full h-[124.49%] max-w-none object-cover transition-transform duration-300 group-hover:scale-105 ${photoPurpose === 'outdoor' ? 'scale-[1.06]' : ''} translate-y-[-4px]`} 
+                      className={`absolute inset-0 w-full h-[124.49%] max-w-none object-cover transition-transform duration-300 group-hover:scale-105 group-hover:blur-[1px] ${photoPurpose === 'outdoor' ? 'scale-[1.06]' : ''} translate-y-[-4px]`} 
                       style={{ top: '0.5%' }}
                     />
                     <div 
                       aria-hidden="true" 
                       className="absolute border-[2.5px] border-solid border-white inset-0 rounded-2xl pointer-events-none" 
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/55 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center px-4 text-center">
-                      <p className="font-['Alexandria',sans-serif] font-bold text-sm text-white mb-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/45 to-black/65 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center px-4 text-center">
+                      <p className="font-sans font-extrabold text-base text-white mb-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
                         Outdoor Portrait
                       </p>
-                      <p className="font-['Alexandria',sans-serif] font-medium text-xs text-white/90 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
+                      <p className="font-sans font-medium text-[11px] text-white/85 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
                         Natural light, playful energy
                       </p>
                     </div>
@@ -1670,6 +1567,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                       </div>
                     )}
                   </button>
+                  </div>
                 </div>
               </div>
 
@@ -1681,7 +1579,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                       <path d={svgPathsFigma.p3f6d3580} fill="#242424" />
                     </svg>
                   </div>
-                  <ol className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505] uppercase list-decimal" start={3}>
+                  <ol className="font-sans font-semibold text-sm text-[#050505] uppercase list-decimal" start={3}>
                     <li className="list-inside ms-1">
                       <span>background</span>
                     </li>
@@ -1694,7 +1592,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                   {photoPurpose === 'professional' && (
                     <button
                       onClick={() => setBackgroundColor('none')}
-                      className={`relative w-11 h-11 md:w-12 md:h-12 shrink-0 transition-all duration-300 rounded-full ${
+                      className={`relative w-11 h-11 md:w-12 md:h-12 shrink-0 transition-all duration-300 rounded-full overflow-hidden ${
                         backgroundColor === 'none' 
                           ? 'ring-[3px] ring-[#333] ring-offset-2 ring-offset-white' 
                           : 'hover:scale-110 active:scale-95'
@@ -1716,7 +1614,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                           initial={{ scale: 0, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           transition={{ type: "spring", duration: 0.4, bounce: 0.5 }}
-                          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                          className="absolute inset-1 rounded-full flex items-center justify-center pointer-events-none"
                         >
                           <div className="w-6 h-6 rounded-full flex items-center justify-center bg-[#333]">
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3">
@@ -1733,7 +1631,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                     <button
                       key={color}
                       onClick={() => setBackgroundColor(color)}
-                      className={`relative w-11 h-11 md:w-12 md:h-12 shrink-0 transition-all duration-300 rounded-full ${
+                      className={`relative w-11 h-11 md:w-12 md:h-12 shrink-0 transition-all duration-300 rounded-full overflow-hidden ${
                         backgroundColor === color 
                           ? 'ring-[3px] ring-[#333] ring-offset-2 ring-offset-white' 
                           : 'hover:scale-110 active:scale-95'
@@ -1750,7 +1648,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                           initial={{ scale: 0, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           transition={{ type: "spring", duration: 0.4, bounce: 0.5 }}
-                          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                          className="absolute inset-1 rounded-full flex items-center justify-center pointer-events-none"
                         >
                           <div className="w-6 h-6 rounded-full flex items-center justify-center bg-[#333]">
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3">
@@ -1766,7 +1664,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
 
               {/* Generate 按钮 */}
               <div className="flex flex-col gap-2 pt-6 pb-10">
-                <p className="font-['Alexandria',sans-serif] font-normal text-[10px] text-black">
+                <p className="font-sans font-normal text-[10px] text-black">
                   * Ready to generate a compliant ID photo
                 </p>
                 
@@ -1777,7 +1675,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                       ? 'bg-blue-50 border-blue-200' 
                       : 'bg-red-50 border-red-200'
                   }`}>
-                    <p className={`font-['Alexandria',sans-serif] font-normal text-xs whitespace-pre-line ${
+                    <p className={`font-sans font-normal text-xs whitespace-pre-line ${
                       errorMessage.startsWith('Demo Mode')
                         ? 'text-blue-600'
                         : 'text-red-600'
@@ -1793,7 +1691,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                     <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    <span className="font-['Alexandria',sans-serif] text-xs text-amber-800">
+                    <span className="font-sans text-xs text-amber-800">
                       Demo Mode: Only changing background
                     </span>
                   </div>
@@ -1803,7 +1701,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                       <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      <span className="font-['Alexandria',sans-serif] text-xs text-green-800">
+                      <span className="font-sans text-xs text-green-800">
                         Azure AI Connected
                       </span>
                     </div>
@@ -1813,13 +1711,12 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                 <motion.button
                   onClick={handleGenerate}
                   disabled={!canGenerate || isGenerating}
-                  className={`h-11 md:h-12 rounded-xl flex items-center justify-center transition-all shadow-lg hover:shadow-xl active:scale-[0.98] ${
-                    isGenerating
-                      ? 'gap-0 bg-gradient-to-r from-[#f4edff] via-[#eadfff] to-[#e0d4ff] cursor-wait'
-                      : canGenerate
-                        ? 'gap-2.5 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] hover:from-[#7c3aed] hover:to-[#6d28d9]'
-                        : 'gap-2.5 bg-[#d4d4d4] cursor-not-allowed'
-                  }`}
+                  className={`h-11 md:h-12 rounded-xl flex items-center justify-center transition-all shadow-lg hover:shadow-xl active:scale-[0.98] ${isGenerating
+                    ? 'gap-2 bg-gradient-to-r from-[#f4edff] via-[#eadfff] to-[#e0d4ff] cursor-wait'
+                    : canGenerate
+                      ? 'gap-2.5 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] hover:from-[#7c3aed] hover:to-[#6d28d9]'
+                      : 'gap-2.5 bg-[#d4d4d4] cursor-not-allowed'
+                    }`}
                   animate={canGenerate && !isGenerating ? {
                     boxShadow: [
                       '0 8px 22px -6px rgba(139, 92, 246, 0.22)',
@@ -1834,13 +1731,25 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                   }}
                 >
                   {isGenerating ? (
-                    <GeneratingLottie size={40} />
+                    <>
+                      <div className="w-[25px] h-[25px] flex items-center justify-center">
+                        <GeneratingLottie size={6.2} />
+                      </div>
+                      <motion.span
+                        initial={{ opacity: 0.25 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 1.4, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+                        className="font-sans font-semibold text-sm md:text-base text-[#5b21b6]"
+                      >
+                        Generating
+                      </motion.span>
+                    </>
                   ) : (
                     <>
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 20 20">
                         <path d={svgPathsFigma.p1a8c2ac0} fill="white" fillOpacity="0.9" />
                       </svg>
-                      <span className="font-['Alexandria',sans-serif] font-semibold text-sm md:text-base text-white">
+                      <span className="font-sans font-semibold text-sm md:text-base text-white">
                         Generate
                       </span>
                     </>
@@ -1949,7 +1858,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                               duration: 0.6, 
                               ease: [0.16, 1, 0.3, 1]
                             }}
-                            className="font-['Alexandria',sans-serif] font-semibold text-lg md:text-xl text-[#050505] min-h-[70px] flex items-center justify-center px-4"
+                            className="font-sans font-semibold text-lg md:text-xl text-[#050505] min-h-[70px] flex items-center justify-center px-4"
                           >
                             {waitingMessages[currentMessageIndex].text}
                           </motion.p>
@@ -1995,10 +1904,10 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                         </svg>
                       </div>
                       <div className="flex flex-col gap-1.5 text-center">
-                        <p className="font-['Alexandria',sans-serif] font-semibold text-sm md:text-base text-[#050505]">
+                        <p className="font-sans font-semibold text-sm md:text-base text-[#050505]">
                           Image Preview
                         </p>
-                        <p className="font-['Alexandria',sans-serif] font-normal text-xs md:text-sm text-[#999]">
+                        <p className="font-sans font-normal text-xs md:text-sm text-[#999]">
                           Your generated photo will appear here
                         </p>
                       </div>
@@ -2026,7 +1935,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                       <path d={svgPaths.p22b6d800} fill="#050505" />
                     </svg>
                   )}
-                  <span className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
+                  <span className="font-sans font-semibold text-sm text-[#050505]">
                     {isGenerating ? 'Generating...' : 'Regenerate'}
                   </span>
                 </button>
@@ -2044,7 +1953,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 10 13">
                     <path d={svgPaths.p2f9c1e00} fill="white" />
                   </svg>
-                  <span className="font-['Alexandria',sans-serif] font-semibold text-sm text-white">
+                  <span className="font-sans font-semibold text-sm text-white">
                     Download
                   </span>
                 </button>
@@ -2059,19 +1968,19 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                   className="w-full"
                 >
                   <div className="flex items-center justify-between mb-2.5">
-                    <h3 className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
+                    <h3 className="font-sans font-semibold text-sm text-[#050505]">
                       History ({imageHistory.length})
                     </h3>
                     <button
                       onClick={() => setImageHistory([])}
-                      className="font-['Alexandria',sans-serif] font-medium text-xs text-[#999] hover:text-[#666] transition-colors"
+                      className="font-sans font-medium text-xs text-[#999] hover:text-[#666] transition-colors"
                     >
                       Clear All
                     </button>
                   </div>
                   
                   {/* 横向滚动的缩略图���表 - Portrait 比例 */}
-                  <div className="relative w-full overflow-x-auto scrollbar-hide px-1 py-2">
+                  <div className="relative w-full overflow-x-auto scrollbar-hide px-3 py-2">
                     <div className="flex gap-2.5 pb-2">
                       {imageHistory.map((item) => (
                         <motion.div
@@ -2108,7 +2017,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                           
                           {/* 时间标签 */}
                           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-1.5 py-1">
-                            <p className="font-['Alexandria',sans-serif] font-medium text-[9px] text-white truncate">
+                            <p className="font-sans font-medium text-[9px] text-white truncate">
                               {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>
@@ -2145,10 +2054,10 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                     <Key className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="font-['Alexandria',sans-serif] font-bold text-lg text-[#050505]">
+                    <h2 className="font-sans font-bold text-lg text-[#050505]">
                       API Configuration
                     </h2>
-                    <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666]">
+                    <p className="font-sans font-normal text-xs text-[#666]">
                       Connect your AI image generation service
                     </p>
                   </div>
@@ -2166,7 +2075,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
 
                 {/* API Endpoint 输入 */}
                 <div className="flex flex-col gap-2">
-                  <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
+                  <label className="font-sans font-semibold text-sm text-[#050505]">
                     API Endpoint URL
                   </label>
                   <input
@@ -2174,16 +2083,16 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                     value={apiUrl}
                     onChange={(e) => setApiUrl(e.target.value)}
                     placeholder="https://api.example.com"
-                    className="w-full h-11 px-4 bg-white border border-[#d4d4d4] rounded-xl font-['Alexandria',sans-serif] text-sm text-[#050505] placeholder:text-[#999] focus:outline-none focus:ring-2 focus:ring-[#333] focus:border-transparent transition-all"
+                    className="w-full h-11 px-4 bg-white border border-[#d4d4d4] rounded-xl font-sans text-sm text-[#050505] placeholder:text-[#999] focus:outline-none focus:ring-2 focus:ring-[#333] focus:border-transparent transition-all"
                   />
-                  <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666]">
+                  <p className="font-sans font-normal text-xs text-[#666]">
                     Your API service endpoint URL
                   </p>
                 </div>
 
                 {/* API Key 输入 */}
                 <div className="flex flex-col gap-2">
-                  <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
+                  <label className="font-sans font-semibold text-sm text-[#050505]">
                     API Key
                   </label>
                   <div className="relative">
@@ -2192,7 +2101,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
                       placeholder="Your API Key"
-                      className="w-full h-11 px-4 pr-12 bg-white border border-[#d4d4d4] rounded-xl font-['Alexandria',sans-serif] text-sm text-[#050505] placeholder:text-[#999] focus:outline-none focus:ring-2 focus:ring-[#333] focus:border-transparent transition-all"
+                      className="w-full h-11 px-4 pr-12 bg-white border border-[#d4d4d4] rounded-xl font-sans text-sm text-[#050505] placeholder:text-[#999] focus:outline-none focus:ring-2 focus:ring-[#333] focus:border-transparent transition-all"
                     />
                     <button
                       type="button"
@@ -2206,40 +2115,14 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                       )}
                     </button>
                   </div>
-                  <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#999]">
+                  <p className="font-sans font-normal text-xs text-[#999]">
                     Your API key will be stored locally and never shared
-                  </p>
-                </div>
-
-                {/* Deployment ID 输入 - 带 Refine 按钮 */}
-                <div className="flex flex-col gap-2">
-                  <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
-                    Deployment Name
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={deploymentId}
-                      onChange={(e) => setDeploymentId(e.target.value.trim())}
-                      placeholder="gpt-image-1.5"
-                      className="flex-1 h-11 px-4 bg-white border border-[#d4d4d4] rounded-xl font-['Alexandria',sans-serif] text-sm text-[#050505] placeholder:text-[#999] focus:outline-none focus:ring-2 focus:ring-[#333] focus:border-transparent transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setDeploymentId('gpt-image-1.5')}
-                      className="h-11 px-4 bg-[#333] hover:bg-[#444] text-white rounded-xl font-['Alexandria',sans-serif] font-semibold text-sm transition-all active:scale-95 whitespace-nowrap"
-                    >
-                      Refine
-                    </button>
-                  </div>
-                  <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666]">
-                    Optional. Only needed for Azure OpenAI services.
                   </p>
                 </div>
 
                 {/* 错误信息 */}
                 {errorMessage && (
-                  <p className="font-['Alexandria',sans-serif] font-normal text-xs text-red-500">
+                  <p className="font-sans font-normal text-xs text-red-500">
                     {errorMessage}
                   </p>
                 )}
@@ -2252,7 +2135,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                     setShowApiModal(false);
                     setShowApiKey(false);
                   }}
-                  className="flex-1 h-11 bg-white border border-[#d4d4d4] rounded-xl font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505] hover:bg-[#f5f5f5] hover:border-[#c4c4c4] active:scale-[0.98] transition-all"
+                  className="flex-1 h-11 bg-white border border-[#d4d4d4] rounded-xl font-sans font-semibold text-sm text-[#050505] hover:bg-[#f5f5f5] hover:border-[#c4c4c4] active:scale-[0.98] transition-all"
                 >
                   Cancel
                 </button>
@@ -2265,372 +2148,19 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                       return;
                     }
                     
-                  // 保存 API 配置到 localStorage（全局 + 该页面前缀）
+                  // 保存 API 配置到 localStorage（全局）
                   localStorage.setItem('global_api_key', apiKey);
-                  localStorage.setItem('pet_api_key', apiKey);
-                    localStorage.setItem('pet_api_url', apiUrl);
-                    localStorage.setItem('pet_deployment_id', deploymentId);
-                    localStorage.setItem('pet_api_type', apiType);
+                  localStorage.setItem('global_api_url', apiUrl);
+                  localStorage.setItem('global_api_deployment_id', deploymentId);
+                  localStorage.setItem('global_api_type', apiType);
                     setShowApiModal(false);
                     setShowApiKey(false);
                     setErrorMessage(null);
                   }}
-                  className="flex-1 h-11 bg-[#333] rounded-xl font-['Alexandria',sans-serif] font-semibold text-sm text-white hover:bg-[#222] active:scale-[0.98] transition-all shadow-lg"
+                  className="flex-1 h-11 bg-[#333] rounded-xl font-sans font-semibold text-sm text-white hover:bg-[#222] active:scale-[0.98] transition-all shadow-lg"
                 >
                   Save Configuration
                 </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Prompt 设置弹窗 */}
-      <AnimatePresence>
-        {showPromptModal && (
-          <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4"
-            onClick={() => {
-              setShowPromptModal(false);
-              resetPasswordState();
-            }}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col mx-4"
-            >
-              {/* 弹窗头部 */}
-              <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-[#e5e5e5] flex-shrink-0">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#333] flex items-center justify-center">
-                    <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="font-['Alexandria',sans-serif] font-bold text-base sm:text-lg text-[#050505]">
-                      Prompt Configuration
-                    </h2>
-                    <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666] hidden sm:block">
-                      Customize the prompt for image generation
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowPromptModal(false);
-                    resetPasswordState();
-                  }}
-                  className="w-8 h-8 rounded-lg hover:bg-black/5 active:bg-black/10 transition-all flex items-center justify-center group flex-shrink-0"
-                >
-                  <X className="w-5 h-5 transition-transform group-hover:scale-110 group-hover:rotate-90" />
-                </button>
-              </div>
-
-              {/* 弹窗内容 - 可滚动区域 */}
-              <div className="px-4 sm:px-6 py-4 sm:py-5 flex flex-col gap-4 sm:gap-5 overflow-y-auto">
-                {!isPromptUnlocked ? (
-                  /* 密码输入界面 */
-                  <div className="flex flex-col items-center justify-center py-8 sm:py-12 gap-6">
-                    <div className="w-16 h-16 rounded-2xl bg-[#333] flex items-center justify-center">
-                      <Key className="w-8 h-8 text-white" />
-                    </div>
-                    <div className="text-center">
-                      <h3 className="font-['Alexandria',sans-serif] font-bold text-lg text-[#050505] mb-2">
-                        Enter Password
-                      </h3>
-                      <p className="font-['Alexandria',sans-serif] text-sm text-[#666]">
-                        Enter 4-digit password to edit prompts
-                      </p>
-                    </div>
-                    
-                    {/* 4位密码输入框 */}
-                    <div className="flex gap-3 sm:gap-4">
-                      {[0, 1, 2, 3].map((index) => (
-                        <input
-                          key={index}
-                          ref={passwordInputRefs[index]}
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={1}
-                          value={promptPassword[index]}
-                          onChange={(e) => handlePasswordInput(index, e.target.value)}
-                          onKeyDown={(e) => handlePasswordKeyDown(index, e)}
-                          className={`w-12 h-14 sm:w-16 sm:h-20 text-center text-2xl sm:text-3xl font-bold border-2 rounded-xl transition-all focus:outline-none focus:ring-2 ${
-                            passwordError 
-                              ? 'border-red-500 bg-red-50 text-red-600 focus:ring-red-500 animate-shake' 
-                              : 'border-[#d4d4d4] bg-white text-[#050505] focus:border-[#333] focus:ring-[#333]'
-                          }`}
-                          autoFocus={index === 0}
-                        />
-                      ))}
-                    </div>
-                    
-                    {passwordError && (
-                      <motion.p 
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="font-['Alexandria',sans-serif] text-sm text-red-600 font-semibold"
-                      >
-                        ❌ Incorrect password. Please try again.
-                      </motion.p>
-                    )}
-                  </div>
-                ) : (
-                  <>
-                {/* Reference Images for Official */}
-                <div className="flex flex-col gap-2 sm:gap-3">
-                  <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
-                    Reference Images (Official)
-                  </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
-                    {[0, 1, 2, 3, 4].map((index) => (
-                      <div key={index} className="relative aspect-square">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleReferenceImageUpload(index, true)}
-                          className="hidden"
-                          id={`ref-img-official-${index}`}
-                        />
-                        {tempReferenceImagesOfficial[index] ? (
-                          <div className="relative w-full h-full group">
-                            <img
-                              src={tempReferenceImagesOfficial[index]!}
-                              alt={`Reference ${index + 1}`}
-                              className="w-full h-full object-cover rounded-lg border-2 border-[#d4d4d4]"
-                            />
-                            <button
-                              onClick={() => removeReferenceImage(index, true)}
-                              className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 w-5 h-5 sm:w-6 sm:h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="w-3 h-3 sm:w-4 sm:h-4" />
-                            </button>
-                            <div className="absolute bottom-0.5 left-0.5 sm:bottom-1 sm:left-1 bg-black/60 text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded">
-                              image {String(index + 1).padStart(2, '0')}
-                            </div>
-                          </div>
-                        ) : (
-                          <label
-                            htmlFor={`ref-img-official-${index}`}
-                            className="w-full h-full border-2 border-dashed border-[#d4d4d4] rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#333] hover:bg-[#fafafa] transition-all"
-                          >
-                            <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-[#999] mb-0.5 sm:mb-1" />
-                            <span className="text-[10px] sm:text-xs text-[#999] font-['Alexandria',sans-serif]">
-                              image {String(index + 1).padStart(2, '0')}
-                            </span>
-                          </label>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Prompt 输入 */}
-                <div className="flex flex-col gap-2">
-                  <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
-                    Custom Prompt (Official)
-                  </label>
-                  <textarea
-                    value={tempPromptOfficial}
-                    onChange={(e) => setTempPromptOfficial(e.target.value)}
-                    placeholder="Enter your custom prompt here... (Leave empty to use default prompt)"
-                    className="w-full h-32 sm:h-40 px-3 sm:px-4 py-2 sm:py-3 bg-white border border-[#d4d4d4] rounded-xl font-['Alexandria',sans-serif] text-sm text-[#050505] placeholder:text-[#999] focus:outline-none focus:ring-2 focus:ring-[#333] focus:border-transparent transition-all resize-none"
-                  />
-                  <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666]">
-                    {tempPromptOfficial ? `Using custom prompt (${tempPromptOfficial.length} chars${tempPromptOfficial.length > 500 ? `, ${tempPromptOfficial.length - 500} over recommended` : ''})` : 'Using default optimized prompt (~100 chars)'}
-                  </p>
-                </div>
-
-                {/* Reference Images for Professional */}
-                <div className="flex flex-col gap-2 sm:gap-3">
-                  <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
-                    Reference Images (Professional)
-                  </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
-                    {[0, 1, 2, 3, 4].map((index) => (
-                      <div key={index} className="relative aspect-square">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleReferenceImageUpload(index, false)}
-                          className="hidden"
-                          id={`ref-img-professional-${index}`}
-                        />
-                        {tempReferenceImagesProfessional[index] ? (
-                          <div className="relative w-full h-full group">
-                            <img
-                              src={tempReferenceImagesProfessional[index]!}
-                              alt={`Reference ${index + 1}`}
-                              className="w-full h-full object-cover rounded-lg border-2 border-[#d4d4d4]"
-                            />
-                            <button
-                              onClick={() => removeReferenceImage(index, false)}
-                              className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 w-5 h-5 sm:w-6 sm:h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="w-3 h-3 sm:w-4 sm:h-4" />
-                            </button>
-                            <div className="absolute bottom-0.5 left-0.5 sm:bottom-1 sm:left-1 bg-black/60 text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded">
-                              image {String(index + 1).padStart(2, '0')}
-                            </div>
-                          </div>
-                        ) : (
-                          <label
-                            htmlFor={`ref-img-professional-${index}`}
-                            className="w-full h-full border-2 border-dashed border-[#d4d4d4] rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#333] hover:bg-[#fafafa] transition-all"
-                          >
-                            <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-[#999] mb-0.5 sm:mb-1" />
-                            <span className="text-[10px] sm:text-xs text-[#999] font-['Alexandria',sans-serif]">
-                              image {String(index + 1).padStart(2, '0')}
-                            </span>
-                          </label>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Prompt 输入 */}
-                <div className="flex flex-col gap-2">
-                  <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
-                    Custom Prompt (Professional)
-                  </label>
-                  <textarea
-                    value={tempPromptProfessional}
-                    onChange={(e) => setTempPromptProfessional(e.target.value)}
-                    placeholder="Enter your custom prompt here... (Leave empty to use default prompt)"
-                    className="w-full h-32 sm:h-40 px-3 sm:px-4 py-2 sm:py-3 bg-white border border-[#d4d4d4] rounded-xl font-['Alexandria',sans-serif] text-sm text-[#050505] placeholder:text-[#999] focus:outline-none focus:ring-2 focus:ring-[#333] focus:border-transparent transition-all resize-none"
-                  />
-                  <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666]">
-                    {tempPromptProfessional ? `Using custom prompt (${tempPromptProfessional.length} chars${tempPromptProfessional.length > 500 ? `, ${tempPromptProfessional.length - 500} over recommended` : ''})` : 'Using default optimized prompt (~100 chars)'}
-                  </p>
-                </div>
-
-                {/* 🎛️ Flux 图生图参数调节器 */}
-                <div className="hidden p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl flex flex-col gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="font-['Alexandria',sans-serif] font-bold text-sm text-blue-900">
-                        🎯 Image-to-Image Parameters
-                      </h3>
-                      <p className="font-['Alexandria',sans-serif] text-xs text-blue-700">
-                        Fine-tune how much to preserve from your original photo
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Strength 滑块 */}
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-blue-900">
-                        Strength (保留程度)
-                      </label>
-                      <span className="font-['Alexandria',sans-serif] font-bold text-sm text-blue-600 px-3 py-1 bg-white rounded-lg">
-                        {fluxStrength.toFixed(2)}
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0.1"
-                      max="0.7"
-                      step="0.05"
-                      value={fluxStrength}
-                      onChange={(e) => setFluxStrength(parseFloat(e.target.value))}
-                      className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-600 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-lg"
-                    />
-                    <div className="flex items-center justify-between">
-                      <span className="font-['Alexandria',sans-serif] text-xs text-blue-700">
-                        0.1 (最大保留原图)
-                      </span>
-                      <span className="font-['Alexandria',sans-serif] text-xs text-blue-700">
-                        0.7 (大幅改变)
-                      </span>
-                    </div>
-                    <p className="font-['Alexandria',sans-serif] text-xs text-blue-600 bg-white px-3 py-2 rounded-lg">
-                      💡 <strong>推荐 0.4-0.6</strong> 平衡保留人物与风格改变。当前: {fluxStrength < 0.4 ? '⚠️ 偏低，改变较少' : fluxStrength < 0.65 ? '✅ 很好' : '❌ 过高，可能丢失人物'}
-                    </p>
-                  </div>
-
-                  {/* Guidance Scale 滑块 */}
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-blue-900">
-                        Guidance Scale (引导强度)
-                      </label>
-                      <span className="font-['Alexandria',sans-serif] font-bold text-sm text-blue-600 px-3 py-1 bg-white rounded-lg">
-                        {fluxGuidanceScale.toFixed(1)}
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      min="3.0"
-                      max="12.0"
-                      step="0.5"
-                      value={fluxGuidanceScale}
-                      onChange={(e) => setFluxGuidanceScale(parseFloat(e.target.value))}
-                      className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-600 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-lg"
-                    />
-                    <div className="flex items-center justify-between">
-                      <span className="font-['Alexandria',sans-serif] text-xs text-blue-700">
-                        3.0 (更自然)
-                      </span>
-                      <span className="font-['Alexandria',sans-serif] text-xs text-blue-700">
-                        12.0 (严格遵循)
-                      </span>
-                    </div>
-                    <p className="font-['Alexandria',sans-serif] text-xs text-blue-600 bg-white px-3 py-2 rounded-lg">
-                      💡 <strong>推荐 7.0-8.0</strong> 以平衡 prompt 和原图。当前: {fluxGuidanceScale >= 7 && fluxGuidanceScale <= 8.5 ? '✅ 很好' : '⚠️ 可以调整'}
-                    </p>
-                  </div>
-                </div>
-              </>
-                )}
-              </div>
-
-              {/* 弹窗底部按钮 */}
-              <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 bg-[#fafafa] border-t border-[#e5e5e5] flex-shrink-0">
-                <button
-                  onClick={() => {
-                    setShowPromptModal(false);
-                    resetPasswordState();
-                    setTempPromptOfficial(customPromptOfficial);
-                    setTempPromptProfessional(customPromptProfessional);
-                    setTempReferenceImagesOfficial([...referenceImagesOfficial]);
-                    setTempReferenceImagesProfessional([...referenceImagesProfessional]);
-                  }}
-                  className="flex-1 h-10 sm:h-11 bg-white border border-[#d4d4d4] rounded-xl font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505] hover:bg-[#f5f5f5] hover:border-[#c4c4c4] active:scale-[0.98] transition-all"
-                >
-                  Cancel
-                </button>
-                {isPromptUnlocked && (
-                  <button
-                    onClick={() => {
-                      // 保存自定义 prompt 到 localStorage
-                      setCustomPromptOfficial(tempPromptOfficial);
-                      setCustomPromptProfessional(tempPromptProfessional);
-                      setReferenceImagesOfficial([...tempReferenceImagesOfficial]);
-                      setReferenceImagesProfessional([...tempReferenceImagesProfessional]);
-                      localStorage.setItem('pet_prompt_official', tempPromptOfficial);
-                      localStorage.setItem('pet_prompt_professional', tempPromptProfessional);
-                      localStorage.setItem('pet_ref_images_official', JSON.stringify(tempReferenceImagesOfficial));
-                      localStorage.setItem('pet_ref_images_professional', JSON.stringify(tempReferenceImagesProfessional));
-                      localStorage.setItem('pet_flux_strength', fluxStrength.toString());
-                      localStorage.setItem('pet_flux_guidance_scale', fluxGuidanceScale.toString());
-                      setShowPromptModal(false);
-                      resetPasswordState();
-                    }}
-                    className="flex-1 h-10 sm:h-11 bg-[#333] rounded-xl font-['Alexandria',sans-serif] font-semibold text-sm text-white hover:bg-[#222] active:scale-[0.98] transition-all shadow-lg"
-                  >
-                    Save Prompt
-                  </button>
-                )}
               </div>
             </motion.div>
           </div>
@@ -2661,10 +2191,10 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
                     </svg>
                   </div>
                   <div>
-                    <h2 className="font-['Alexandria',sans-serif] font-bold text-lg text-red-600">
+                    <h2 className="font-sans font-bold text-lg text-red-600">
                       Content Safety Alert
                     </h2>
-                    <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666]">
+                    <p className="font-sans font-normal text-xs text-[#666]">
                       Request blocked by safety system
                     </p>
                   </div>
@@ -2680,15 +2210,15 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
               {/* 弹窗内容 */}
               <div className="px-6 py-6 flex flex-col gap-4">
                 <div className="flex flex-col gap-3">
-                  <p className="font-['Alexandria',sans-serif] text-sm text-[#333] leading-relaxed">
+                  <p className="font-sans text-sm text-[#333] leading-relaxed">
                     {safetyErrorMessage}
                   </p>
                   
                   <div className="mt-2 p-4 bg-red-50 border border-red-100 rounded-xl">
-                    <p className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505] mb-2">
+                    <p className="font-sans font-semibold text-sm text-[#050505] mb-2">
                       💡 Tips:
                     </p>
-                    <ul className="font-['Alexandria',sans-serif] text-xs text-[#666] space-y-1.5 list-disc list-inside">
+                    <ul className="font-sans text-xs text-[#666] space-y-1.5 list-disc list-inside">
                       <li>Make sure your photo is a clear portrait</li>
                       <li>Avoid images with inappropriate content</li>
                       <li>Use professional-looking photos</li>
@@ -2702,7 +2232,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
               <div className="flex items-center gap-3 px-6 py-4 bg-[#fafafa] border-t border-[#e5e5e5]">
                 <button
                   onClick={() => setShowSafetyModal(false)}
-                  className="flex-1 h-11 bg-[#050505] rounded-xl font-['Alexandria',sans-serif] font-semibold text-sm text-white hover:bg-[#333] active:scale-[0.98] transition-all"
+                  className="flex-1 h-11 bg-[#050505] rounded-xl font-sans font-semibold text-sm text-white hover:bg-[#333] active:scale-[0.98] transition-all"
                 >
                   Got it
                 </button>
@@ -2725,7 +2255,7 @@ export default function Card02Detail({ onClose }: IDPhotoDetailPageProps) {
             <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d2d] border-b border-[#333]">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-[#22c55e]"></div>
-                <span className="font-['Alexandria',sans-serif] font-semibold text-xs text-white">
+                <span className="font-sans font-semibold text-xs text-white">
                   Console Log
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-[#333] text-[10px] font-bold text-white">

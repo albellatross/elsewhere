@@ -881,7 +881,7 @@ export default function ScrollToExploreMoreTemplates() {
     <div className="content-stretch flex flex-col gap-[6px] items-center relative size-full" data-name="Scroll to explore more templates">
       <div className="absolute h-[63px] left-[-18px] top-[-4px] w-[298px]" style={{ backgroundImage: "url('data:image/svg+xml;utf8,<svg viewBox=\\\\'0 0 298 63\\\\' xmlns=\\\\'http://www.w3.org/2000/svg\\\\' preserveAspectRatio=\\\\'none\\\\'><rect x=\\\\'0\\\\' y=\\\\'0\\\\' height=\\\\'100%\\\\' width=\\\\'100%\\\\' fill=\\\\'url(%23grad)\\\\' opacity=\\\\'1\\\\'/><defs><radialGradient id=\\\\'grad\\\\' gradientUnits=\\\\'userSpaceOnUse\\\\' cx=\\\\'0\\\\' cy=\\\\'0\\\\' r=\\\\'10\\\\' gradientTransform=\\\\'matrix(14.843 -7.8085e-15 2.8695e-10 3.1379 149 21.764)\\\\'><stop stop-color=\\\\'rgba(255,255,255,1)\\\\' offset=\\\\'0\\\\'/><stop stop-color=\\\\'rgba(255,255,255,0)\\\\' offset=\\\\'1\\\\'/></radialGradient></defs></svg>')" }} />
       <motion.p 
-        className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 text-[#242424] text-[13px] text-nowrap"
+        className="font-sans font-normal leading-[normal] relative shrink-0 text-[#242424] text-[13px] text-nowrap"
         animate={{ 
           opacity: [0.6, 1, 0.6],
           scale: [1, 1.03, 1]

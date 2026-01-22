@@ -10,7 +10,7 @@ export default function CreateButton() {
           </g>
         </svg>
       </div>
-      <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Create</p>
+      <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Create</p>
     </div>
   );
 }

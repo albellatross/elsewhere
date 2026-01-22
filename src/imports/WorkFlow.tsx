@@ -104,7 +104,7 @@ export default function WorkFlow() {
           <div className="content-stretch flex flex-col gap-[70px] items-start relative shrink-0" data-name="text">
             <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0">
               <div className="content-stretch flex items-center justify-center relative shrink-0" data-name="title">
-                <p className="font-['Alexandria:Bold',sans-serif] font-bold leading-[72px] relative shrink-0 text-[#0b0b0b] text-[80px] text-nowrap">Rem</p>
+                <p className="font-sans font-bold leading-[72px] relative shrink-0 text-[#0b0b0b] text-[80px] text-nowrap">Rem</p>
                 <div className="relative shrink-0 size-[80px]" data-name="pen">
                   <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 80 80">
                     <g clipPath="url(#clip0_1_443)" id="pen">
@@ -123,13 +123,13 @@ export default function WorkFlow() {
                     </defs>
                   </svg>
                 </div>
-                <p className="font-['Alexandria:Bold',sans-serif] font-bold leading-[72px] relative shrink-0 text-[#0b0b0b] text-[80px] text-nowrap">x Reality.</p>
+                <p className="font-sans font-bold leading-[72px] relative shrink-0 text-[#0b0b0b] text-[80px] text-nowrap">x Reality.</p>
               </div>
-              <p className="font-['Alexandria:Medium',sans-serif] font-medium leading-[72px] relative shrink-0 text-[#8e8e93] text-[80px] text-nowrap">Not Identity.</p>
+              <p className="font-sans font-medium leading-[72px] relative shrink-0 text-[#8e8e93] text-[80px] text-nowrap">Not Identity.</p>
             </div>
             <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0 text-nowrap">
-              <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[28px] relative shrink-0 text-[#1c1c1e] text-[24px]">Same you. New worlds.</p>
-              <div className="font-['Alexandria:Regular',sans-serif] font-normal leading-[24px] relative shrink-0 text-[#5f5f66] text-[20px]">
+              <p className="font-sans font-semibold leading-[28px] relative shrink-0 text-[#1c1c1e] text-[24px]">Same you. New worlds.</p>
+              <div className="font-sans font-normal leading-[24px] relative shrink-0 text-[#5f5f66] text-[20px]">
                 <p className="mb-0">Drop a photo in. Remix the world around you.</p>
                 <p>No prompts. No face swaps. No weird AI vibes.</p>
               </div>
@@ -139,7 +139,7 @@ export default function WorkFlow() {
             <Sparkle>
               <path d={svgPaths.p124ef7b0} fill="var(--fill-0, white)" fillOpacity="0.9" id="Shape" />
             </Sparkle>
-            <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[16px] text-[rgba(255,255,255,0.9)] text-nowrap">Try it now</p>
+            <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[16px] text-[rgba(255,255,255,0.9)] text-nowrap">Try it now</p>
           </div>
         </div>
         <div className="absolute h-[50px] left-[132px] top-[45px] w-[125.179px]" data-name="logo">
@@ -170,7 +170,7 @@ export default function WorkFlow() {
             <Sparkle>
               <path d={svgPaths.p124ef7b0} fill="var(--fill-0, #050505)" id="Shape" />
             </Sparkle>
-            <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Create</p>
+            <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Create</p>
           </div>
           <div className="content-stretch flex gap-[10px] h-[44px] items-center justify-center pl-[20px] pr-[24px] py-[12px] relative rounded-[999px] shrink-0 w-[150px]" data-name="Templates button">
             <Wrapper>
@@ -178,7 +178,7 @@ export default function WorkFlow() {
                 <path d={svgPaths.p2853cd00} fill="var(--fill-0, #050505)" id="Shape" />
               </g>
             </Wrapper>
-            <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Templates</p>
+            <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Templates</p>
           </div>
           <div className="content-stretch flex gap-[10px] h-[44px] items-center justify-center pl-[20px] pr-[24px] py-[12px] relative rounded-[999px] shrink-0 w-[150px]" data-name="Studio button">
             <div aria-hidden="true" className="absolute border border-[rgba(31,31,31,0.1)] border-solid inset-0 pointer-events-none rounded-[999px]" />
@@ -187,7 +187,7 @@ export default function WorkFlow() {
                 <path d={svgPaths.p120bce80} fill="var(--fill-0, #050505)" id="Shape" />
               </g>
             </Wrapper>
-            <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Studio</p>
+            <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Studio</p>
           </div>
         </div>
       </div>

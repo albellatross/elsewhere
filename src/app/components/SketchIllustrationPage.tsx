@@ -1,8 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useScrollAssist } from '../hooks/useScrollAssist';
 import { GenerationAnimation } from './figma/GenerationAnimation';
 import GeneratingLottie from './GeneratingLottie';
-import { X, Upload, Key, Eye, EyeOff, Settings, Coffee, Soup, MessageCircle, Wind, Sparkles, PartyPopper, Camera, UtensilsCrossed, Sunrise, Armchair } from 'lucide-react';
+import { supabase } from '../../services/supabase';
+import { X, Upload, Key, Eye, EyeOff, Coffee, Soup, MessageCircle, Wind, Sparkles, PartyPopper, Camera, UtensilsCrossed, Sunrise, Armchair, Check } from 'lucide-react';
 import svgPaths from "../../imports/svg-lxjhel9141";
 import svgPathsFigma from "../../imports/svg-pike97bdu9";
 import svgPathsImage from "../../imports/svg-xmejrywrxw";
@@ -19,11 +21,15 @@ type IDPhotoDetailPageProps = {
   onClose: () => void;
   title?: string;
   description?: string;
-  purposeVariant?: 'default' | 'pet';
+  purposeVariant?: 'default' | 'pet' | 'product';
+  purposeImagesOverride?: Partial<Record<PurposeKey, string>>;
+  purposeConfigOverride?: Partial<Record<PurposeKey, { title: string; desc: string }>>;
+  purposeOrderOverride?: PurposeKey[];
+  showProductFields?: boolean;
 };
 
 type BackgroundColor = 'none' | 'blue' | 'red' | 'white' | 'grey' | 'black';
-type PhotoPurpose = 'birthday' | 'newyear' | 'christmas' | 'halloween' | null;
+type PhotoPurpose = 'birthday' | 'newyear' | 'christmas' | 'halloween' | 'costume' | null;
 type PurposeKey = NonNullable<PhotoPurpose>;
 
 const DEFAULT_PURPOSE_CONFIG: Record<PurposeKey, { title: string; desc: string }> = {
@@ -31,16 +37,101 @@ const DEFAULT_PURPOSE_CONFIG: Record<PurposeKey, { title: string; desc: string }
   newyear: { title: 'New Year use', desc: 'Fresh, hopeful, future-ready' },
   christmas: { title: 'Christmas use', desc: 'Cozy, joyful, festive-ready' },
   halloween: { title: 'Halloween use', desc: 'Playful, bold, style-ready' },
+  costume: { title: 'Cosplay use', desc: 'Expressive, character-driven styling' },
 };
 
 const PET_PURPOSE_CONFIG: Record<PurposeKey, { title: string; desc: string }> = {
-  birthday: { title: 'Pet Christmas use', desc: 'Cozy, heartwarming, holiday-ready' },
-  newyear: { title: 'Pet Halloween use', desc: 'Playful, expressive, character-driven' },
-  christmas: { title: 'Pet New Year use', desc: 'Bright, hopeful, fresh-start inspired' },
-  halloween: { title: 'Pet Cosplay use', desc: 'Creative, charming, personality-led' },
+  newyear: { title: 'Pet New Year use', desc: 'Bright, hopeful, fresh-start inspired' },
+  christmas: { title: 'Pet Christmas use', desc: 'Cozy, heartwarming, celebration-ready' },
+  halloween: { title: 'Pet Halloween use', desc: 'Playful, expressive, character-driven' },
+  costume: { title: 'Costume / Cosplay', desc: 'Creative outfits guided by reference props' },
+  birthday: { title: 'Pet Birthday use', desc: 'Personal, warm, celebration-ready' },
+};
+const DEFAULT_PURPOSE_ORDER: PurposeKey[] = ['birthday', 'newyear', 'christmas', 'halloween'];
+const PET_PURPOSE_ORDER: PurposeKey[] = ['newyear', 'christmas', 'halloween', 'costume'];
+const PRODUCT_PURPOSE_ORDER: PurposeKey[] = ['birthday', 'newyear', 'christmas', 'halloween'];
+const ALL_PURPOSES: PurposeKey[] = Array.from(new Set([
+  ...DEFAULT_PURPOSE_ORDER,
+  ...PET_PURPOSE_ORDER,
+  ...PRODUCT_PURPOSE_ORDER,
+]));
+
+const DEFAULT_PURPOSE_STYLE_INSTRUCTIONS: Record<PurposeKey, string> = {
+  birthday: 'Warm indoor birthday celebration styling with soft pastel confetti cues and a modern semi-formal outfit. Keep framing close to the reference inspiration.',
+  newyear: 'Use the Lunar New Year reference as the style guide. Match the composition, elegant red and gold wardrobe, and cinematic teal-shadow with warm-highlight color grading from the reference background.',
+  christmas: 'Cozy winter holiday styling with layered knits, golden accents, and relaxed posing that stays faithful to the reference scene.',
+  halloween: 'Follow the Halloween reference composition. Keep the stylized costume layers in deep purples and charcoals, add orange rim lighting, and reproduce the moody illustrated background energy.',
+  costume: 'Use the costume reference to shift wardrobe and props while keeping posture anchored to the source image.',
 };
 
-const PURPOSES: PurposeKey[] = ['birthday', 'newyear', 'christmas', 'halloween'];
+const PRODUCT_PURPOSE_CONFIG: Record<PurposeKey, { title: string; desc: string }> = {
+  birthday: { title: 'Cosmetics', desc: 'Refined, premium, beauty-focused' },
+  newyear: { title: 'Electronics', desc: 'Minimal, innovative, product-first' },
+  christmas: { title: 'Sports & Fitness', desc: 'Dynamic, bold, performance-driven' },
+  halloween: { title: 'Food & Beverage', desc: 'Appetizing, clean, visually engaging' },
+  costume: { title: 'Logo + Content', desc: 'Add brand copy with logo callout' },
+};
+
+const PET_PURPOSE_STYLE_INSTRUCTIONS: Record<PurposeKey, string> = {
+  newyear: "Keep the original photo's composition, camera angle, and pose exactly the same. Apply Lunar New Year apparel and props while preserving the pet's markings and proportions.",
+  christmas: "Maintain the identical framing, lens feel, and posture from the uploaded photo. Layer in cozy Christmas textures, garlands, and warm twinkle lighting without altering anatomy.",
+  halloween: "Lock the shot to the uploaded image's composition and lens style. Add playful Halloween costume elements, props, and moody lighting while keeping fur patterns and pose unchanged.",
+  costume: "Follow the cosplay reference selected by the backend. Dress the pet in that exact costume, include its signature props, and mirror the reference background mood while keeping the pet's face, fur pattern, proportions, and pose exactly the same as the uploaded photo.",
+  birthday: "Match the uploaded photo's framing, posture, and lens characteristics. Overlay soft celebration details and lighting while preserving the pet's anatomy and expression.",
+};
+
+const PRODUCT_PURPOSE_STYLE_INSTRUCTIONS: Record<PurposeKey, string> = {
+  // Cosmetics
+  birthday: 'Premium cosmetics macro hero. Soft diffused key and fill, glass/acrylic vanity props, and clean editorial composition. Emphasize formula texture with controlled specular highlights and subtle reflections.',
+  // Electronics
+  newyear: 'Modern electronics hero shot with clean geometry and orthographic-friendly composition. Neutral studio gradients, crisp highlights, soft reflections. Showcase materials (anodized aluminum/plastic), accurate seams and ports, with a subtle futuristic rim.',
+  // Sports
+  christmas: 'Performance sports product showcase with dynamic diagonal staging. Punchy contrast, energetic key light, props hinting a training environment. Highlight grip/mesh/foam textures and durability; motion cues without blurring the product.',
+  // Food & Beverage
+  halloween: 'Gourmet food and beverage plate-up with appetite-forward lighting and golden highlights. Artful props (cutlery, napkins, stone slab), steam/condensation or pour cues when relevant, shallow depth of field on a clean backdrop; color-accurate and fresh.',
+  // Legacy (kept but not used for branding overlay)
+  costume: 'Design a lifestyle marketing layout that combines the hero product, brand copy space, and supporting props while leaving clear areas for graphic overlays.',
+};
+
+const PRODUCT_VARIANT_KEY_MAP: Partial<Record<PurposeKey, string>> = {
+  birthday: 'cosmetics',
+  newyear: 'electronics',
+  christmas: 'sports',
+  halloween: 'food',
+  costume: 'logo_content',
+};
+
+const DEFAULT_REFERENCE_POOLS: Record<PurposeKey, string[]> = {
+  birthday: [imgBirthdayDefault],
+  newyear: [imgNewYearDefault],
+  christmas: [imgChristmasDefault],
+  halloween: [imgHalloweenDefault],
+  costume: [imgHalloweenDefault],
+};
+
+const PET_REFERENCE_POOLS: Record<PurposeKey, string[]> = {
+  newyear: [imgPetNewYear],
+  christmas: [imgPetChristmas],
+  halloween: [imgPetHalloween],
+  costume: [imgPetCosplay],
+  birthday: [imgPetChristmas],
+};
+
+const PURPOSE_DEFAULT_BACKGROUND: Record<PurposeKey, BackgroundColor> = {
+  birthday: 'white',
+  newyear: 'none',
+  christmas: 'grey',
+  halloween: 'blue',
+  costume: 'none',
+};
+
+const PURPOSE_IMAGE_LAYOUT: Record<PurposeKey, { top: string; height: string }> = {
+  birthday: { top: '1.83%', height: '124.49%' },
+  newyear: { top: '0.04%', height: '124.49%' },
+  christmas: { top: '1.83%', height: '124.49%' },
+  halloween: { top: '0.5%', height: '124.49%' },
+  costume: { top: '0%', height: '124.49%' },
+};
 
 // 有趣的等待提示文案
 const waitingMessages = [
@@ -206,7 +297,27 @@ export default function SketchIllustrationPage({
   title = 'Personal Photoshoot',
   description = 'Express your style, mood, and identity.',
   purposeVariant = 'default',
+  purposeImagesOverride,
+  purposeConfigOverride,
+  purposeOrderOverride,
+  showProductFields = false,
 }: IDPhotoDetailPageProps) {
+  const [productName, setProductName] = useState('');
+  const [productLogo, setProductLogo] = useState<string | null>(null);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProductLogo(reader.result as string);
+        // 触发滚动辅助
+        setTimeout(triggerScrollAssist, 300);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -216,20 +327,48 @@ export default function SketchIllustrationPage({
     };
   }, []);
 
-  const purposeConfig = purposeVariant === 'pet' ? PET_PURPOSE_CONFIG : DEFAULT_PURPOSE_CONFIG;
-  const purposeImages = purposeVariant === 'pet'
-    ? {
-        birthday: imgPetChristmas,
-        newyear: imgPetHalloween,
-        christmas: imgPetNewYear,
-        halloween: imgPetCosplay,
-      }
-    : {
-        birthday: imgBirthdayDefault,
-        newyear: imgNewYearDefault,
-        christmas: imgChristmasDefault,
-        halloween: imgHalloweenDefault,
-      };
+  const purposeConfig = useMemo(() => {
+    const base = purposeVariant === 'pet'
+      ? PET_PURPOSE_CONFIG
+      : purposeVariant === 'product'
+        ? PRODUCT_PURPOSE_CONFIG
+        : DEFAULT_PURPOSE_CONFIG;
+    return { ...base, ...(purposeConfigOverride ?? {}) } as Record<PurposeKey, { title: string; desc: string }>;
+  }, [purposeVariant, purposeConfigOverride]);
+
+  const activePurposeOrder = useMemo<PurposeKey[]>(() => {
+    if (purposeOrderOverride && purposeOrderOverride.length > 0) {
+      return purposeOrderOverride;
+    }
+    if (purposeVariant === 'pet') return PET_PURPOSE_ORDER;
+    if (purposeVariant === 'product') return PRODUCT_PURPOSE_ORDER;
+    return DEFAULT_PURPOSE_ORDER;
+  }, [purposeVariant, purposeOrderOverride]);
+
+  const resolvedReferencePools = useMemo<Record<PurposeKey, string[]>>(() => {
+    const basePools = purposeVariant === 'pet'
+      ? PET_REFERENCE_POOLS
+      : DEFAULT_REFERENCE_POOLS;
+    return ALL_PURPOSES.reduce((acc, purpose) => {
+      const override = purposeImagesOverride?.[purpose];
+      acc[purpose] = override ? [override] : basePools[purpose] ?? [];
+      return acc;
+    }, {} as Record<PurposeKey, string[]>);
+  }, [purposeVariant, purposeImagesOverride]);
+
+  const initialReferenceImages = useMemo<Record<PurposeKey, string>>(() => {
+    return ALL_PURPOSES.reduce((acc, purpose) => {
+      const pool = resolvedReferencePools[purpose] ?? [];
+      acc[purpose] = pool[0] ?? '';
+      return acc;
+    }, {} as Record<PurposeKey, string>);
+  }, [resolvedReferencePools]);
+
+  const [purposeImages, setPurposeImages] = useState<Record<PurposeKey, string>>(initialReferenceImages);
+
+  useEffect(() => {
+    setPurposeImages(initialReferenceImages);
+  }, [initialReferenceImages]);
 
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [photoPurpose, setPhotoPurpose] = useState<PhotoPurpose>(null);
@@ -245,34 +384,29 @@ export default function SketchIllustrationPage({
   const [apiUrl, setApiUrl] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showPromptModal, setShowPromptModal] = useState(false);
   const [showSafetyModal, setShowSafetyModal] = useState(false);
   const [safetyErrorMessage, setSafetyErrorMessage] = useState('');
-  const emptyPromptState = { birthday: '', newyear: '', christmas: '', halloween: '' } as const;
-  const emptyRefState = {
-    birthday: [null, null, null, null, null],
-    newyear: [null, null, null, null, null],
-    christmas: [null, null, null, null, null],
-    halloween: [null, null, null, null, null],
-  } as const;
-  const [customPrompts, setCustomPrompts] = useState<Record<PurposeKey, string>>({ ...emptyPromptState });
-  const [tempPrompts, setTempPrompts] = useState<Record<PurposeKey, string>>({ ...emptyPromptState });
-  // 密码保护状态
-  const [promptPassword, setPromptPassword] = useState(['', '', '', '']); // 4位密码
-  const [isPromptUnlocked, setIsPromptUnlocked] = useState(false);
-  const [passwordError, setPasswordError] = useState(false);
-  const passwordInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
-  // 参考图状态 - 每种用途都有 5 张参考图
-  const [referenceImages, setReferenceImages] = useState<Record<PurposeKey, (string | null)[]>>({ ...emptyRefState });
-  const [tempReferenceImages, setTempReferenceImages] = useState<Record<PurposeKey, (string | null)[]>>({ ...emptyRefState });
   const [deploymentId, setDeploymentId] = useState('');
   const [showConsole, setShowConsole] = useState(false);
   const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
-  const [fluxStrength, setFluxStrength] = useState(0.15);  // Default strength (Official: 0.15, Professional: 0.25)
   const [fluxGuidanceScale, setFluxGuidanceScale] = useState(7.5);  // 引导强度
-  const [referenceStrength, setReferenceStrength] = useState(0.6);  // 参考图影响权重：0.6 (STYLE ONLY)
   const [apiType, setApiType] = useState<'auto' | 'flux' | 'openai'>('auto'); // API 类型选择
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { scrollContainerRef, triggerScrollAssist } = useScrollAssist();
+
+  const pickReferenceForPurpose = (purpose: PurposeKey, preferDifferent = false): string | null => {
+    const pool = resolvedReferencePools[purpose] ?? [];
+    if (pool.length === 0) {
+      return null;
+    }
+    if (purposeVariant === 'pet' && !purposeImagesOverride?.[purpose]) {
+      const available = preferDifferent ? pool.filter((src) => src !== purposeImages[purpose]) : pool;
+      const selectionPool = available.length > 0 ? available : pool;
+      const index = Math.floor(Math.random() * selectionPool.length);
+      return selectionPool[index];
+    }
+    return pool[0] ?? null;
+  };
   
   // API 版本固定值
   const apiVersion = '2025-04-01-preview';
@@ -308,42 +442,33 @@ export default function SketchIllustrationPage({
   // 从 localStorage 加载 API 配置和自定义 prompt
   useEffect(() => {
     const savedGlobalApiKey = localStorage.getItem('global_api_key');
+    const savedGlobalApiUrl = localStorage.getItem('global_api_url');
+    const savedGlobalDeploymentId = localStorage.getItem('global_api_deployment_id');
+    const savedGlobalApiType = localStorage.getItem('global_api_type') as 'auto' | 'flux' | 'openai' | null;
     const savedApiKey = localStorage.getItem('sketch_api_key');
     const savedApiUrl = localStorage.getItem('sketch_api_url');
     const savedDeploymentId = localStorage.getItem('sketch_deployment_id');
     const savedApiType = localStorage.getItem('sketch_api_type') as 'auto' | 'flux' | 'openai' | null;
-    const loadedPrompts: Record<PurposeKey, string> = { ...emptyPromptState };
-    const loadedRefs: Record<PurposeKey, (string | null)[]> = { ...emptyRefState };
     
-    if (savedGlobalApiKey) {
-      setApiKey(savedGlobalApiKey);
-    } else if (savedApiKey) {
-      setApiKey(savedApiKey);
+    const resolvedApiKey = savedGlobalApiKey ?? savedApiKey ?? '';
+    const resolvedApiUrl = savedGlobalApiUrl ?? savedApiUrl ?? '';
+    const resolvedDeploymentId = savedGlobalDeploymentId ?? savedDeploymentId ?? '';
+    const resolvedApiType = savedGlobalApiType ?? savedApiType ?? null;
+
+    if (resolvedApiKey) setApiKey(resolvedApiKey);
+    if (resolvedApiUrl) setApiUrl(resolvedApiUrl);
+    if (resolvedDeploymentId) setDeploymentId(resolvedDeploymentId);
+    if (resolvedApiType) setApiType(resolvedApiType);
+
+    if (!savedGlobalApiKey && savedApiKey) localStorage.setItem('global_api_key', savedApiKey);
+    if (!savedGlobalApiUrl && savedApiUrl) localStorage.setItem('global_api_url', savedApiUrl);
+    if (!savedGlobalDeploymentId && savedDeploymentId) {
+      localStorage.setItem('global_api_deployment_id', savedDeploymentId);
     }
-    if (savedApiUrl) setApiUrl(savedApiUrl);
-    if (savedDeploymentId) setDeploymentId(savedDeploymentId);
-    if (savedApiType) setApiType(savedApiType);
+    if (!savedGlobalApiType && savedApiType) localStorage.setItem('global_api_type', savedApiType);
 
-    PURPOSES.forEach((key) => {
-      const savedPrompt = localStorage.getItem(`sketch_prompt_${key}`);
-      if (savedPrompt) loadedPrompts[key] = savedPrompt;
-      const savedRefs = localStorage.getItem(`sketch_ref_images_${key}`);
-      if (savedRefs) {
-      try {
-          const parsed = JSON.parse(savedRefs);
-          loadedRefs[key] = parsed;
-      } catch (e) {
-          console.error(`Failed to parse saved reference images (${key})`);
-      }
-    }
-    });
 
-    setCustomPrompts(loadedPrompts);
-    setReferenceImages(loadedRefs);
-
-    const savedFluxStrength = localStorage.getItem('sketch_flux_strength');
     const savedFluxGuidanceScale = localStorage.getItem('sketch_flux_guidance_scale');
-    if (savedFluxStrength) setFluxStrength(parseFloat(savedFluxStrength));
     if (savedFluxGuidanceScale) setFluxGuidanceScale(parseFloat(savedFluxGuidanceScale));
   }, []);
 
@@ -355,90 +480,28 @@ export default function SketchIllustrationPage({
         setUploadedImage(e.target?.result as string);
         setGeneratedImage(null);
         setErrorMessage(null);
+        // 触发滚动辅助
+        setTimeout(triggerScrollAssist, 300);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  // 处理密码输入
-  const handlePasswordInput = (index: number, value: string) => {
-    // 只允许数字
-    if (value && !/^\d$/.test(value)) return;
-    
-    const newPassword = [...promptPassword];
-    newPassword[index] = value;
-    setPromptPassword(newPassword);
-    setPasswordError(false);
-    
-    // 自动跳到下一个输入框
-    if (value && index < 3) {
-      passwordInputRefs[index + 1].current?.focus();
-    }
-    
-    // 如果输入了4位，自动验证
-    if (newPassword.every(digit => digit !== '')) {
-      const passwordString = newPassword.join('');
-      if (passwordString === '0112') {
-        setIsPromptUnlocked(true);
-        setPasswordError(false);
-      } else {
-        setPasswordError(true);
-        // 清空密码并重置焦点
-        setTimeout(() => {
-          setPromptPassword(['', '', '', '']);
-          setPasswordError(false);
-          passwordInputRefs[0].current?.focus();
-        }, 1000);
+  const handleSelectPurpose = (purpose: PurposeKey, defaultColor: BackgroundColor) => {
+    setPhotoPurpose(purpose);
+    setBackgroundColor(defaultColor);
+    if (purposeVariant === 'pet' && !purposeImagesOverride?.[purpose]) {
+      const nextReference = pickReferenceForPurpose(purpose, true);
+      if (nextReference) {
+        setPurposeImages((prev) => {
+          if (prev[purpose] === nextReference) {
+            return prev;
+          }
+          return { ...prev, [purpose]: nextReference };
+        });
       }
     }
-  };
-  
-  // 处理密码输入框的退格键
-  const handlePasswordKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !promptPassword[index] && index > 0) {
-      passwordInputRefs[index - 1].current?.focus();
-    }
-  };
-  
-  // 重置密码状态（关闭弹窗时）
-  const resetPasswordState = () => {
-    setPromptPassword(['', '', '', '']);
-    setIsPromptUnlocked(false);
-    setPasswordError(false);
-  };
-
-  // 处理参考��上传
-  const handleReferenceImageUpload = (index: number, isOfficial: boolean) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageData = e.target?.result as string;
-        if (isOfficial) {
-          const newImages = [...tempReferenceImagesOfficial];
-          newImages[index] = imageData;
-          setTempReferenceImagesOfficial(newImages);
-        } else {
-          const newImages = [...tempReferenceImagesProfessional];
-          newImages[index] = imageData;
-          setTempReferenceImagesProfessional(newImages);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // 删除参考图
-  const removeReferenceImage = (index: number, isOfficial: boolean) => {
-    if (isOfficial) {
-      const newImages = [...tempReferenceImagesOfficial];
-      newImages[index] = null;
-      setTempReferenceImagesOfficial(newImages);
-    } else {
-      const newImages = [...tempReferenceImagesProfessional];
-      newImages[index] = null;
-      setTempReferenceImagesProfessional(newImages);
-    }
+    triggerScrollAssist();
   };
 
   // 获取背景颜色的简单描述（用于 prompt）
@@ -456,6 +519,24 @@ export default function SketchIllustrationPage({
 
   // 获取背景颜色的详细描述（用于添加到 prompt）
   const getBackgroundInstruction = (): string => {
+    if (showProductFields) {
+      if (backgroundColor === 'none') {
+        return 'Keep the original set around the product while subtly enhancing lighting and depth to feel like a polished commercial shoot.';
+      }
+
+      const productBackgrounds: Record<Exclude<BackgroundColor, 'none'>, string> = {
+        blue: 'Set the product within a cool-toned studio washed with azure gradients, translucent props, and gentle rim lighting that reinforces a premium look.',
+        red: 'Stage the product against a warm amber studio backdrop with soft terracotta gradients and cinematic highlights for an intimate lifestyle feel.',
+        white: 'Place the product on a high-key white cyclorama with soft directional light, crisp reflections, and clean editorial styling.',
+        grey: 'Use a neutral matte grey studio with controlled falloff and gentle vignette that keeps attention on the product silhouette.',
+        black: 'Surround the product with a charcoal studio environment featuring controlled specular highlights and moody depth for a luxury presentation.',
+      };
+
+      const key = backgroundColor === 'none' ? 'white' : backgroundColor;
+      const instruction = productBackgrounds[key as Exclude<BackgroundColor, 'none'>] ?? '';
+      return instruction ? `${instruction} Maintain photorealistic lighting continuity with the captured product.` : '';
+    }
+
     // ✨ 如果选择"空"，不添加任何背景指令
     if (backgroundColor === 'none') {
       return '';
@@ -495,34 +576,88 @@ export default function SketchIllustrationPage({
     }
   };
 
+  const getPurposeStylingInstruction = (): string => {
+    if (!photoPurpose) {
+      return '';
+    }
+    if (showProductFields) {
+      return PRODUCT_PURPOSE_STYLE_INSTRUCTIONS[photoPurpose] ?? '';
+    }
+    const instructions = purposeVariant === 'pet'
+      ? PET_PURPOSE_STYLE_INSTRUCTIONS
+      : DEFAULT_PURPOSE_STYLE_INSTRUCTIONS;
+    return instructions[photoPurpose];
+  };
+
+  const getProductIdentityInstruction = (): string => {
+    // 产品模式下由后端主导品牌处理，不在前端注入品牌相关文字指令
+    return '';
+  };
+
   // 构建简洁的 Flux 图生图 prompt
   // ✨ Flux 模型需要简短、描述性的 prompt，而非长指令
   const buildPrompt = (): string => {
-    const backgroundColorName = getBackgroundColorName(backgroundColor);
     const backgroundInstruction = getBackgroundInstruction();
-    
-    // 获取当前用途的参考图
-    const currentReferenceImages = photoPurpose === 'official' 
-      ? referenceImagesOfficial 
-      : referenceImagesProfessional;
-    const validReferenceImages = currentReferenceImages.filter(img => img !== null);
-    const hasReferenceImages = validReferenceImages.length > 0;
-    
-    // ✨ Prompt 策略：
-    // 1. 明确主图优先级（MUST PRESERVE）
-    // 2. 说明参考图用途（ONLY for composition/lighting/style）
-    // 3. 否定指令（DO NOT change the person）
-    // 4. 简洁描述期望效果
-    if (hasReferenceImages) {
-      return `CRITICAL: The INPUT IMAGE is the SOLE source for the person's face and identity. 
-      The REFERENCE IMAGES are ONLY for style, lighting, and background atmosphere. 
-      DO NOT use the face, person, or identity from the reference images. 
-      Completely IGNORE the people in the reference images. 
-      Transfer ONLY the visual style (colors, lighting, texture) from the reference images to the input person.
-      Professional ID photo. ${backgroundInstruction}`;
-    } else {
-      return `Professional ID photo of the person in the input image. ${backgroundInstruction} Clean, professional studio lighting. Preserve all facial features and identity.`;
-    }
+    const purposeInstruction = getPurposeStylingInstruction();
+    const subjectIntro = showProductFields
+      ? 'High-resolution product hero photograph derived directly from the uploaded image.'
+      : purposeVariant === 'pet'
+        ? 'High-resolution portrait of the same pet from the input photo.'
+        : 'High-resolution portrait of the same person from the input image.';
+    const identityInstruction = showProductFields
+      ? 'Preserve the original product geometry, packaging, labels, and surface materials exactly as shown in the uploaded photo. No redesigns or alterations to structure.'
+      : purposeVariant === 'pet'
+        ? "Preserve the pet's fur pattern, facial expression, proportions, and pose exactly."
+        : 'Preserve all facial features, identity, and hairstyle.';
+    const poseInstruction = showProductFields
+      ? ''
+      : purposeVariant === 'pet'
+        ? ''
+        : "Maintain the subject's posture and expression.";
+    const productIdentityInstruction = getProductIdentityInstruction();
+    const parts = [
+      subjectIntro,
+      identityInstruction,
+      poseInstruction,
+      purposeInstruction,
+      backgroundInstruction,
+      productIdentityInstruction,
+      'Use the provided reference image as the visual guide.'
+    ].filter((part): part is string => !!part && part.trim().length > 0);
+    return parts.join(' ');
+  };
+
+  /**
+   * ⚡️ Optimization: Compress and resize image before upload
+   */
+  const compressImage = async (imageSrc: string, maxWidth = 1024, maxHeight = 1024): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width; width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height; height = maxHeight;
+          }
+        }
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error("Canvas context failed")); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob); else reject(new Error("Compression failed"));
+        }, 'image/jpeg', 0.8);
+      };
+      img.onerror = (e) => reject(new Error("Failed to load image for compression"));
+      img.src = imageSrc;
+    });
   };
 
   const handleGenerate = async () => {
@@ -532,21 +667,63 @@ export default function SketchIllustrationPage({
     setErrorMessage(null);
     
     try {
-      // 获取当前用途的参考图
-      const currentReferenceImages = photoPurpose === 'official' 
-        ? referenceImagesOfficial 
-        : referenceImagesProfessional;
+      addLog('🚀 Starting optimized generation...');
+      // Increase strength for product visuals so output follows the uploaded image more strongly
+      let resolvedFluxStrength = showProductFields ? 0.6 : (photoPurpose === 'official' ? 0.15 : 0.38);
+      let resolvedFluxGuidance = fluxGuidanceScale;
+      let resolvedFluxSteps: number | null = null;
+      let resolvedFluxWidth = 768;
+      let resolvedFluxHeight = 1024;
+      let resolvedFluxModel: string | null = null;
+      let resolvedReferenceStrength: number | null = null;
       
-      const validReferenceImages = currentReferenceImages.filter(img => img !== null);
-      
-      if (validReferenceImages.length > 0) {
-        addLog(`📷 Found ${validReferenceImages.length} reference images`);
-        addLog('✅ Reference images will be included as style guidance (low influence)');
-        addLog('💡 Main photo input will take priority in generation');
-      } else {
-        addLog('📷 No reference images provided');
+      // ✅ Fix: Define validReferenceImages before use
+      const validReferenceImages: string[] = [];
+      const currentPurpose = photoPurpose as PurposeKey;
+      // For product visuals, rely on the uploaded image as the primary guide and avoid extra style refs
+      const useReferenceImages = !(purposeVariant === 'pet' && currentPurpose !== 'costume') && !showProductFields;
+      let referenceForGeneration = purposeImages[currentPurpose];
+
+      if (useReferenceImages && purposeVariant === 'pet' && !purposeImagesOverride?.[currentPurpose]) {
+        const nextReference = pickReferenceForPurpose(currentPurpose, true);
+        if (nextReference) {
+          referenceForGeneration = nextReference;
+          setPurposeImages((prev) => {
+            if (prev[currentPurpose] === nextReference) {
+              return prev;
+            }
+            return { ...prev, [currentPurpose]: nextReference };
+          });
+        }
       }
+
+      if (useReferenceImages && referenceForGeneration) {
+        validReferenceImages.push(referenceForGeneration);
+        const logValue = referenceForGeneration.startsWith('data:')
+          ? `base64 (${referenceForGeneration.length} chars)`
+          : referenceForGeneration;
+        addLog('🖼️ Reference image selected', logValue);
+      } else if (!useReferenceImages) {
+        addLog('🎯 Using uploaded photo only for styling guidance', currentPurpose);
+      } else {
+        addLog('⚠️ No reference image available for current purpose', currentPurpose);
+      }
+
+      // 品类优先：不把品牌 Logo 当作参考图传入模型，交由后端控制品牌排版
+
+      const imageBlob = await compressImage(uploadedImage);
       
+      // Convert compressed blob to base64 for Flux/JSON APIs
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve) => {
+        reader.onloadend = () => {
+          const res = reader.result as string;
+          resolve(res.includes('base64,') ? res.split('base64,')[1] : res);
+        };
+        reader.readAsDataURL(imageBlob);
+      });
+      const compressedBase64 = await base64Promise;
+
       // 如果没有配置 API，直接使用 Demo Mode
       if (!apiKey || !apiUrl) {
         console.log('⚠️⚠️⚠️ Using Demo Mode (no API configured)...');
@@ -574,7 +751,14 @@ export default function SketchIllustrationPage({
       addLog('🚀 Starting image generation with API');
       addLog('✅ API Key configured - Using real Azure AI');
       addLog('📸 Photo purpose', photoPurpose);
+      if (showProductFields) {
+        addLog('🧩 Product variant', PRODUCT_VARIANT_KEY_MAP[currentPurpose] ?? currentPurpose);
+      }
       addLog('🎨 Background color', backgroundColor);
+      if (showProductFields) {
+        if (productName.trim()) addLog('🏷️ Product name', productName.trim());
+        addLog('🪪 Brand logo provided', productLogo ? 'yes' : 'no');
+      }
       
       // ✨ 添加背景处理模式说明
       if (backgroundColor === 'none') {
@@ -585,29 +769,127 @@ export default function SketchIllustrationPage({
         addLog('🎯 Background Mode: COLOR TONE - Will add color grading while keeping existing background');
       }
       
-      // 根据照片类型选择对应的 prompt
-      let prompt = photoPurpose === 'official' ? customPromptOfficial : customPromptProfessional;
-      const backgroundInstruction = getBackgroundInstruction();
-      const hasReferenceImages = validReferenceImages.length > 0;
-      
-      // ✨ 如果用户提供了自定义 prompt，在后面添加背景颜色描述和主图优先说明
-      if (prompt && prompt.trim()) {
-        addLog('📝 Using custom prompt with background instruction');
-        addLog('📄 Original custom prompt:', prompt.trim());
+      // 🔄 尝试从后端获取动态 Prompt (Supabase Edge Function)
+      let finalPrompt = buildPrompt();
+      try {
+        const featureKey = showProductFields
+          ? 'create_product'
+          : purposeVariant === 'pet'
+            ? 'create_pet'
+            : 'create_personal';
+        // 当存在品牌信息时，仍使用具体品类变体（cosmetics/electronics/sports/food），并通过标志让后端启用 logo+content 布局
+        const hasBranding = showProductFields && (productLogo || (productName && productName.trim().length > 0));
+        const styleVariant = PRODUCT_VARIANT_KEY_MAP[currentPurpose] ?? currentPurpose;
+        // 始终使用具体品类变体；通过 flags 让后端启用品牌布局
+        const variantKey = showProductFields
+          ? styleVariant
+          : (photoPurpose || 'default');
+        const resolvedPurposeForBackend = variantKey;
+
+        addLog(`🔄 Syncing latest prompt from backend for ${featureKey}/${variantKey}...`);
+
+        const supabaseUserInputs: Record<string, any> = {
+          purpose: resolvedPurposeForBackend,
+          background_color: backgroundColor,
+        };
+
+        if (showProductFields) {
+          const trimmedName = productName.trim();
+          if (trimmedName) {
+            supabaseUserInputs.product_name = trimmedName;
+          }
+          supabaseUserInputs.product_logo_present = !!productLogo;
+          supabaseUserInputs.product_logo_prompt = productLogo
+            ? 'Integrate the uploaded brand logo exactly as provided.'
+            : 'Leave clear space for future logo placement.';
+          // 额外提示：开启文案区域（让后端按该品类变体执行 logo+content 布局与文案）
+          supabaseUserInputs.enable_brand_copy = hasBranding;
+          supabaseUserInputs.style_variant = styleVariant; // 提示后端具体品类
+          supabaseUserInputs.category_priority = true; // 品类关键词优先级最高
+          // 文案风格提示
+          const brandCopyToneMap: Record<string, string> = {
+            cosmetics: 'elegant, feminine, premium, editorial; refined and understated branding',
+            electronics: 'minimal, innovative, modern, precise; technical clarity and confidence',
+            sports: 'dynamic, bold, performance-driven; motivational and energetic tone',
+            food: 'appetizing, lifestyle, warm, fresh; sensory-driven and inviting tone',
+          };
+          supabaseUserInputs.brand_copy_tone = brandCopyToneMap[styleVariant] || 'refined, modern, premium';
+          supabaseUserInputs.brand_copy_placement = 'Branding appears naturally on product packaging (printed labels, embossed marks, subtle reflections). No floating graphic overlays.';
+          supabaseUserInputs.upload_logo = productLogo
+            ? 'Brand logo asset provided by user; include placement guidance.'
+            : 'No brand logo uploaded; reserve placeholder zone for branding.';
+        }
         
-        // 如果有参考图，在 prompt 中明确说明主图优先
-        const priorityNote = hasReferenceImages 
-          ? ' CRITICAL: The INPUT IMAGE is the SOLE source for the person. Reference images are ONLY for style/lighting/vibe. IGNORE the faces in reference images. DO NOT blend identities.' 
-          : '';
-        
-        prompt = `${prompt.trim()} ${backgroundInstruction}${priorityNote}`;
-        addLog('📄 Final prompt (custom + background + priority):', prompt);
-      } else {
-        // 如果没有自定义 prompt，使用默认的简短 prompt
-        prompt = buildPrompt();
-        addLog('📝 Using default optimized prompt for Flux image-to-image');
-        addLog('📄 Final prompt (default):', prompt);
+        const { data: planData, error: planError } = await supabase.functions.invoke('generate-image', {
+          body: {
+            feature_key: featureKey,
+            variant_key: variantKey,
+            provider_key: 'chatgpt_image',
+            return_payload_only: true,
+            user_inputs: supabaseUserInputs
+          }
+        });
+
+        const planBody = planData?.request?.body_data;
+        if (planBody?.prompt) {
+          finalPrompt = planBody.prompt;
+          addLog('✅ Backend prompt resolved successfully');
+
+          if (typeof planBody.strength === 'number') {
+            resolvedFluxStrength = planBody.strength;
+            addLog('🎚️ Strength from backend', resolvedFluxStrength);
+          }
+          if (typeof planBody.guidance_scale === 'number') {
+            resolvedFluxGuidance = planBody.guidance_scale;
+            addLog('🧭 Guidance scale from backend', resolvedFluxGuidance);
+          }
+          if (typeof planBody.num_inference_steps === 'number') {
+            resolvedFluxSteps = planBody.num_inference_steps;
+            addLog('📏 Steps from backend', resolvedFluxSteps);
+          }
+          if (typeof planBody.width === 'number') {
+            resolvedFluxWidth = planBody.width;
+            addLog('📐 Width from backend', resolvedFluxWidth);
+          }
+          if (typeof planBody.height === 'number') {
+            resolvedFluxHeight = planBody.height;
+            addLog('📐 Height from backend', resolvedFluxHeight);
+          }
+          if (typeof planBody.model === 'string' && planBody.model.trim().length > 0) {
+            resolvedFluxModel = planBody.model.trim();
+            addLog('🤖 Model from backend', resolvedFluxModel);
+          }
+          if (typeof planBody.reference_strength === 'number') {
+            resolvedReferenceStrength = planBody.reference_strength;
+            addLog('🧲 Reference strength from backend', resolvedReferenceStrength);
+          }
+
+          if (planBody.reference_images && Array.isArray(planBody.reference_images)) {
+            addLog(`🖼️ Backend provided ${planBody.reference_images.length} reference images`);
+            planBody.reference_images.forEach((url: string) => {
+              if (!validReferenceImages.includes(url)) {
+                validReferenceImages.push(url);
+              }
+            });
+            const firstBackendReference = planBody.reference_images[0];
+            if (firstBackendReference) {
+              setPurposeImages((prev) => {
+                const existing = prev[currentPurpose];
+                if (existing === firstBackendReference) {
+                  return prev;
+                }
+                return { ...prev, [currentPurpose]: firstBackendReference };
+              });
+            }
+          }
+        }
+      } catch (err) {
+        addLog('⚠️ Backend prompt sync failed, using local fallback');
+        console.error('Backend sync error:', err);
       }
+
+      const prompt = finalPrompt;
+      addLog('📝 Final prompt used:', prompt);
       
       addLog('📝 Prompt length', prompt.length + ' characters');
 
@@ -806,30 +1088,18 @@ export default function SketchIllustrationPage({
         const modelName = deploymentId || 'image editing model';
         addLog('🔧 Using multipart/form-data for image editing (' + modelName + ')');
         
-        // 将 base64 转换为 Blob
-        const base64Data = uploadedImage.includes('base64,') 
-          ? uploadedImage.split('base64,')[1] 
-          : uploadedImage;
-        
-        // 检测图片格式
-        const mimeType = uploadedImage.match(/data:([^;]+);/)?.[1] || 'image/png';
-        const byteCharacters = atob(base64Data);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const imageBlob = new Blob([byteArray], { type: mimeType });
+        // ⚡️ OPTIMIZATION: Use already compressed imageBlob
+        const mimeType = imageBlob.type || 'image/jpeg';
         
         // 创建 FormData
-          const formData = new FormData();
+        const formData = new FormData();
         const isGptImage = deploymentId && deploymentId.toLowerCase().includes('gpt-image');
         
         // gpt-image 使用 image[]（数组格式），DALL-E 2 使用 image
         if (isGptImage) {
-          formData.append('image[]', imageBlob, 'main_photo.png');  // 主图：第一张图片（优先保留）
+          formData.append('image[]', imageBlob, 'main_photo.jpg');  // 主图：第一张图片（优先保留）
           addLog('📷 Main photo added as first image (will be preserved)');
-          
+
           // 添加参考图片到 gpt-image 请求（仅作为风格参考）
           if (validReferenceImages.length > 0) {
             addLog(`🖼️ Adding ${validReferenceImages.length} reference images (style guidance only)`);
@@ -837,21 +1107,31 @@ export default function SketchIllustrationPage({
             for (let i = 0; i < validReferenceImages.length; i++) {
               const refImg = validReferenceImages[i];
               if (refImg) {
-                // 将参考图转换为 Blob
-                const refBase64Data = refImg.includes('base64,') 
-                  ? refImg.split('base64,')[1] 
-                  : refImg;
-                const refMimeType = refImg.match(/data:([^;]+);/)?.[1] || 'image/png';
-                const refByteCharacters = atob(refBase64Data);
-                const refByteNumbers = new Array(refByteCharacters.length);
-                for (let j = 0; j < refByteCharacters.length; j++) {
-                  refByteNumbers[j] = refByteCharacters.charCodeAt(j);
+                // ✨ 修复：只有当它是 data URL 或 base64 时才尝试解码
+                if (refImg.startsWith('data:') || !refImg.startsWith('http')) {
+                  try {
+                    const refBase64Data = refImg.includes('base64,') 
+                      ? refImg.split('base64,')[1] 
+                      : refImg;
+                    const refMimeType = refImg.match(/data:([^;]+);/)?.[1] || 'image/png';
+                    const refByteCharacters = atob(refBase64Data);
+                    const refByteNumbers = new Array(refByteCharacters.length);
+                    for (let j = 0; j < refByteCharacters.length; j++) {
+                      refByteNumbers[j] = refByteCharacters.charCodeAt(j);
+                    }
+                    const refByteArray = new Uint8Array(refByteNumbers);
+                    const refBlob = new Blob([refByteArray], { type: refMimeType });
+                    
+                    formData.append('image[]', refBlob, `style_reference_${i + 1}.png`);
+                    addLog(`  ✅ Style reference ${i + 1} (Base64): ${refBlob.size} bytes`);
+                  } catch (e) {
+                    addLog(`  ⚠️ Failed to decode reference image ${i + 1}, skipping...`);
+                  }
+                } else {
+                  // 如果是网络 URL，由于 multipart 无法直接带 URL，
+                  // 在 gpt-image 策略下我们暂时跳过或改用 prompt 描述
+                  addLog(`  ℹ️ Style reference ${i + 1} is a URL (skipped for multipart)`);
                 }
-                const refByteArray = new Uint8Array(refByteNumbers);
-                const refBlob = new Blob([refByteArray], { type: refMimeType });
-                
-                formData.append('image[]', refBlob, `style_reference_${i + 1}.png`);
-                addLog(`  ✅ Style reference ${i + 1}: ${refBlob.size} bytes`);
               }
             }
           }
@@ -899,12 +1179,25 @@ export default function SketchIllustrationPage({
           }
         }
         
-        // 发送 multipart 请求
-        response = await fetch(fullApiUrl, {
-          method: 'POST',
-          headers: headers,  // 不包含 Content-Type，让浏览器自动设置
-          body: formData
-        });
+        // ⚡️ SPEED OPTIMIZATION: Add timeout to prevent "5 minute" hangs
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
+        try {
+          // 发送 multipart 请求
+          response = await fetch(fullApiUrl, {
+            method: 'POST',
+            headers: headers,  // 不包含 Content-Type，让浏览器自动设置
+            body: formData,
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+        } catch (err: any) {
+          if (err.name === 'AbortError') {
+            throw new Error('Request timed out (2 minutes). The AI provider is taking too long. Please try again or check your API settings.');
+          }
+          throw err;
+        }
         
           } else {
         // 决定使用哪种 JSON API 格式
@@ -927,60 +1220,68 @@ export default function SketchIllustrationPage({
           // Azure AI Services (Flux) - 使用 Flux 特定的参数格式
           // Flux 支持 image-to-image 生成
           
-          // 将上传的图片转换为纯 base64（去掉 data:image/xxx;base64, 前缀）
-          const base64Image = uploadedImage.includes('base64,') 
-            ? uploadedImage.split('base64,')[1] 
-            : uploadedImage;
+          // ⚡️ OPTIMIZATION: Use already compressed base64
+          const base64Image = compressedBase64;
+          const trimmedDeploymentId = deploymentId?.trim() || '';
+          const fluxModelFallback = 'Flux.1-schnell';
+          let fluxModelName = (resolvedFluxModel && resolvedFluxModel.length > 0) ? resolvedFluxModel : trimmedDeploymentId;
+          let isFluxModelName = fluxModelName ? /flux/i.test(fluxModelName) : false;
+          if (!isFluxModelName && fluxModelName) {
+            addLog(`⚠️ Deployment "${fluxModelName}" is not recognized as a Flux model. Falling back to ${fluxModelFallback}.`);
+          }
+          if (!isFluxModelName) {
+            fluxModelName = fluxModelFallback;
+            isFluxModelName = true;
+          }
+          const isSchnell = fluxModelName.toLowerCase().includes('schnell');
           
           console.log('=== IMAGE DATA DEBUG ===');
-          console.log('Original image length:', uploadedImage.length);
-          console.log('Base64 image length:', base64Image.length);
-          console.log('Image starts with:', uploadedImage.substring(0, 50));
-          console.log('Base64 starts with:', base64Image.substring(0, 50));
+          console.log('Original image length:', uploadedImage ? uploadedImage.length : 'N/A');
+          console.log('Compressed Base64 length:', base64Image.length);
           console.log('========================');
           
-          addLog('📷 Image data prepared for API');
+          addLog('📷 Compressed image data prepared for API');
           addLog('Base64 length', base64Image.length);
           
-          // 处理参考图片：将参考图转换为 base64 数组
-          const referenceBase64Images: string[] = [];
-          if (validReferenceImages.length > 0) {
-            addLog(`🖼️ Processing ${validReferenceImages.length} reference images for API`);
-            for (let i = 0; i < validReferenceImages.length; i++) {
-              const refImg = validReferenceImages[i];
-              if (refImg) {
-                const refBase64 = refImg.includes('base64,') 
-                  ? refImg.split('base64,')[1] 
-                  : refImg;
-                referenceBase64Images.push(refBase64);
-                addLog(`  ✅ Reference image ${i + 1}: ${refBase64.length} bytes`);
+          const referencePayload: string[] = [];
+          validReferenceImages.forEach((img) => {
+            if (!img) return;
+            if (img.startsWith('data:')) {
+              const base64 = img.includes('base64,') ? img.split('base64,')[1] : '';
+              if (base64) {
+                referencePayload.push(base64);
               }
+            } else if (/^https?:/i.test(img)) {
+              referencePayload.push(img);
+            } else {
+              referencePayload.push(img);
             }
-          }
-          
+          });
+
           // Flux 图生图请求体
           // Flux API 使用 input_image 参数（不是 image）
+
           requestBody = {
-            model: "Flux.2-pro",  // Azure AI Services 需要 model 参数
-              prompt: prompt,
+            model: fluxModelName,  // Default to Flux.1-schnell when invalid
+            prompt: prompt,
             input_image: base64Image,  // ✅ Flux API 使用 input_image 参数（主图 - 优先保留）
-            width: 896,
-            height: 1152,
-            num_inference_steps: 40,
-            guidance_scale: fluxGuidanceScale,  // 可调节：控制对 prompt 的遵循程度
-            strength: photoPurpose === 'official' ? 0.15 : 0.38,  // 非 official 场景默认增强主体
+            // ⚡️ SPEED OPTIMIZATION: 768x1024 is faster than 896x1152
+            width: resolvedFluxWidth,
+            height: resolvedFluxHeight,
+            num_inference_steps: typeof resolvedFluxSteps === 'number' ? resolvedFluxSteps : (isSchnell ? 4 : 20),
+            guidance_scale: isSchnell ? 1.0 : resolvedFluxGuidance,
+            strength: resolvedFluxStrength,
             seed: Math.floor(Math.random() * 1000000)
           };
-          
-          // 如果有参考图片，添加到请求体中（作为风格参考，中等影响）
-          if (referenceBase64Images.length > 0) {
-            requestBody.reference_images = referenceBase64Images;
-            requestBody.reference_strength = referenceStrength;  // ⚠️ 参考图影响权重：0.3 = 中等参考强度
-            addLog(`✅ Added ${referenceBase64Images.length} reference images with moderate strength (${referenceStrength})`);
-            addLog(`💡 IDENTITY ANCHOR: Input image is the source of truth for the face`);
-            addLog(`💡 STYLE ONLY: Reference images only affect lighting/composition`);
+
+          if (referencePayload.length > 0) {
+            requestBody.reference_images = referencePayload;
+            if (resolvedReferenceStrength !== null) {
+              requestBody.reference_strength = resolvedReferenceStrength;
+            }
+          } else if (resolvedReferenceStrength !== null) {
+            requestBody.reference_strength = resolvedReferenceStrength;
           }
-          
           console.log('=== FLUX IMAGE-TO-IMAGE REQUEST ===');
           console.log('Model:', requestBody.model);
           console.log('Prompt length:', prompt.length);
@@ -988,19 +1289,14 @@ export default function SketchIllustrationPage({
           console.log('input_image parameter exists:', 'input_image' in requestBody);
           console.log('Image data length:', base64Image.length);
           console.log('Image first 100 chars:', base64Image.substring(0, 100));
-          console.log('Reference images count:', referenceBase64Images.length);
-          if (referenceBase64Images.length > 0) {
-            console.log('Reference images lengths:', referenceBase64Images.map(img => img.length + ' bytes'));
-            console.log('Reference strength (影响权重):', requestBody.reference_strength || 'Not set');
-          }
-          console.log('Main image strength:', requestBody.strength, photoPurpose === 'official' ? '(official: 0.15 for background replacement)' : '(enhancement: 0.38)');
+            console.log('Main image strength:', requestBody.strength, photoPurpose === 'official' ? '(official background mode)' : '(enhancement mode)');
           console.log('Guidance scale:', requestBody.guidance_scale);
           console.log('Background color:', backgroundColor);
           console.log('Full request body:', JSON.stringify({
             ...requestBody,
             input_image: '[BASE64_DATA_' + base64Image.length + '_BYTES]',
-            reference_images: referenceBase64Images.length > 0 
-              ? referenceBase64Images.map((_, idx) => `[REF_IMAGE_${idx + 1}]`)
+            reference_images: referencePayload.length > 0
+              ? referencePayload.map((img, idx) => (/^https?:/i.test(img) ? img : `[BASE64_REF_${idx + 1}_${img.length}_BYTES]`))
               : undefined,
             prompt: prompt  // 显示完整 prompt
           }, null, 2));
@@ -1010,17 +1306,15 @@ export default function SketchIllustrationPage({
           addLog('🤖 Model', requestBody.model);
           addLog('📝 Prompt', prompt);  // 添加完整 prompt 到日志
           addLog('📊 input_image base64 length', base64Image.length);
-          addLog('📷 Main photo (primary)', 'Strength: ' + requestBody.strength + (photoPurpose === 'official' ? ' (Official: background replacement)' : ' (Enhanced subject)'));
-          if (referenceBase64Images.length > 0) {
-            addLog('🖼️ Reference images', `${referenceBase64Images.length} images (STYLE ONLY)`);
-            addLog('📉 Reference strength', requestBody.reference_strength + ' (low = minimal influence)');
-            referenceBase64Images.forEach((img, idx) => {
-              addLog(`  • Reference ${idx + 1}`, `${img.length} bytes`);
-            });
-            addLog('🔒 IDENTITY LOCK', 'Main image face is preserved. Refs are for vibe only.');
-          }
-          addLog('💪 Main image strength', requestBody.strength + (photoPurpose === 'official' ? ' (Official: background replacement)' : ' (Enhanced subject)'));
+            addLog('📷 Main photo (primary)', 'Strength: ' + requestBody.strength + (photoPurpose === 'official' ? ' (Official background mode)' : ' (Enhanced subject)'));
+            addLog('💪 Main image strength', requestBody.strength + (photoPurpose === 'official' ? ' (Official background mode)' : ' (Enhanced subject)'));
           addLog('🎯 Guidance scale', requestBody.guidance_scale);
+          if (referencePayload.length > 0) {
+            addLog('🖼️ Reference images attached', referencePayload.map((img, idx) => (/^https?:/i.test(img) ? `URL ${idx + 1}` : `base64_${idx + 1}_${img.length}`)).join(', '));
+          }
+          if (typeof requestBody.reference_strength === 'number') {
+            addLog('🧲 Reference strength', requestBody.reference_strength);
+          }
           addLog('🎨 Background', backgroundColor);
           
       } else {
@@ -1032,11 +1326,11 @@ export default function SketchIllustrationPage({
           requestBody = {
           prompt: prompt,
           n: 1,
-            size: "1024x1536"
+            size: "1024x1024" // ⚡️ Speed Optimization: 1024x1536 -> 1024x1024
           };
           
           // Add model parameter only if it's a valid OpenAI model name
-          const validOpenAIModels = ['dall-e-2', 'dall-e-3', 'gpt-image-1', 'gpt-image-1-mini'];
+          const validOpenAIModels = ['dall-e-2', 'dall-e-3', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-1-mini'];
           if (deploymentId && validOpenAIModels.includes(deploymentId.toLowerCase())) {
             requestBody.model = deploymentId;
             addLog('🤖 Using model', deploymentId);
@@ -1054,12 +1348,25 @@ export default function SketchIllustrationPage({
         console.log('Image base64 length:', requestBody.image ? requestBody.image.length : 'N/A');
         console.log('================================');
         
-        // 调用 Azure AI API 生成图片 (JSON 格式)
-        response = await fetch(fullApiUrl, {
-        method: 'POST',
-        headers: headers,
-          body: JSON.stringify(requestBody)
-      });
+        // ⚡️ SPEED OPTIMIZATION: Add timeout to prevent "5 minute" hangs
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
+        try {
+          // 调用 Azure AI API 生成图片 (JSON 格式)
+          response = await fetch(fullApiUrl, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(requestBody),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+        } catch (err: any) {
+          if (err.name === 'AbortError') {
+            throw new Error('Request timed out (2 minutes). The AI provider is taking too long. Please try again or check your API settings.');
+          }
+          throw err;
+        }
       }
 
       console.log('Azure API Response Status:', response.status);
@@ -1186,6 +1493,7 @@ export default function SketchIllustrationPage({
       setImageHistory(prev => [newHistoryItem, ...prev]);
       setCurrentHistoryId(newHistoryItem.id);
       
+      // 仅使用后端生成的品牌逻辑，不做前端叠加
       setGeneratedImage(imageUrl);
       setErrorMessage(null); // 清除错误信息
     } catch (error) {
@@ -1219,6 +1527,7 @@ export default function SketchIllustrationPage({
           setImageHistory(prev => [newHistoryItem, ...prev]);
           setCurrentHistoryId(newHistoryItem.id);
           
+          // Demo 模式也不做前端品牌叠加
           setGeneratedImage(processedImage);
           setErrorMessage(null); // Demo Mode 成功，不显示错误
           return;
@@ -1241,6 +1550,8 @@ export default function SketchIllustrationPage({
       setErrorMessage(errorMsg);
     } finally {
       setIsGenerating(false);
+      // 成功生成后触发滚动辅助，展示可能出现的历史记录或操作按钮
+      setTimeout(triggerScrollAssist, 500);
     }
   };
 
@@ -1338,6 +1649,8 @@ export default function SketchIllustrationPage({
     setPhotoPurpose(null);
     setBackgroundColor('none');
     setGeneratedImage(null);
+    setProductName('');
+    setProductLogo(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -1410,10 +1723,10 @@ export default function SketchIllustrationPage({
 
             {/* 标题 */}
             <div className="flex flex-col gap-1 min-w-0 flex-1">
-              <h1 className="font-['Alexandria',sans-serif] font-bold text-base md:text-xl text-[#050505] truncate tracking-tight">
+              <h1 className="font-sans font-bold text-base md:text-xl text-[#050505] truncate tracking-tight">
                 {title}
               </h1>
-              <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666] truncate">
+              <p className="font-sans font-normal text-xs text-[#666] truncate">
                 {description}
               </p>
             </div>
@@ -1427,48 +1740,9 @@ export default function SketchIllustrationPage({
               className="flex items-center gap-2.5 px-5 py-2.5 bg-white border border-[#e5e5e5] rounded-xl hover:bg-[#fafafa] hover:border-[#d4d4d4] hover:shadow-sm active:scale-[0.98] transition-all"
             >
               <Key className="w-4 h-4 text-[#666]" />
-              <span className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
+              <span className="font-sans font-semibold text-sm text-[#050505]">
                 API key
               </span>
-            </button>
-
-            {/* Prompt 设置按钮 */}
-            <button 
-              onClick={() => {
-                setTempPromptOfficial(customPromptOfficial);
-                setTempPromptProfessional(customPromptProfessional);
-                setTempReferenceImagesOfficial([...referenceImagesOfficial]);
-                setTempReferenceImagesProfessional([...referenceImagesProfessional]);
-                setShowPromptModal(true);
-              }}
-              className="flex items-center gap-2.5 px-5 py-2.5 bg-white border border-[#e5e5e5] rounded-xl hover:bg-[#fafafa] hover:border-[#d4d4d4] hover:shadow-sm active:scale-[0.98] transition-all"
-            >
-              <Settings className="w-4 h-4 text-[#666]" />
-              <span className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
-                Prompt
-              </span>
-            </button>
-
-            {/* Console 调试按钮 */}
-            <button 
-              onClick={() => setShowConsole(!showConsole)}
-              className={`flex items-center gap-2.5 px-5 py-2.5 border rounded-xl hover:shadow-sm active:scale-[0.98] transition-all ${
-                showConsole 
-                  ? 'bg-[#333] border-[#333] text-white' 
-                  : 'bg-white border-[#e5e5e5] hover:bg-[#fafafa] hover:border-[#d4d4d4]'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span className={`font-['Alexandria',sans-serif] font-semibold text-sm ${showConsole ? 'text-white' : 'text-[#050505]'}`}>
-                Console
-              </span>
-              {consoleLogs.length > 0 && (
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${showConsole ? 'bg-white text-[#333]' : 'bg-[#333] text-white'}`}>
-                  {consoleLogs.length}
-                </span>
-              )}
             </button>
           </div>
         </div>
@@ -1477,7 +1751,10 @@ export default function SketchIllustrationPage({
       {/* 主内容区域 */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
         {/* 左侧控制面板 */}
-        <div className="w-full lg:w-[420px] xl:w-[480px] bg-white overflow-visible lg:overflow-y-auto lg:h-full border-b lg:border-b-0 lg:border-r border-[#e5e5e5] scrollbar-subtle">
+        <div 
+          ref={scrollContainerRef}
+          className="w-full lg:w-[420px] xl:w-[480px] bg-white overflow-visible lg:overflow-y-auto lg:h-full border-b lg:border-b-0 lg:border-r border-[#e5e5e5]"
+        >
           <div className="p-3 sm:p-3.5 md:p-4 lg:p-5">
             <div className="flex flex-col gap-6 md:gap-8 lg:gap-10 max-w-md lg:max-w-none mx-auto">
               {/* 1. PHOTO INPUT */}
@@ -1488,7 +1765,7 @@ export default function SketchIllustrationPage({
                       <path d={svgPathsFigma.p8fd1770} fill="#242424" />
                     </svg>
                   </div>
-                  <ol className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505] uppercase list-decimal" start={1}>
+                  <ol className="font-sans font-semibold text-sm text-[#050505] uppercase list-decimal" start={1}>
                     <li className="list-inside ms-1">
                       <span>photo input</span>
                     </li>
@@ -1524,10 +1801,10 @@ export default function SketchIllustrationPage({
                         </svg>
                   </div>
                       <div className="flex flex-col gap-1.5 text-center">
-                        <p className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
+                        <p className="font-sans font-semibold text-sm text-[#050505]">
                           Upload Photo
                   </p>
-                        <p className="font-['Alexandria',sans-serif] font-medium text-xs text-[#999]">
+                        <p className="font-sans font-medium text-xs text-[#999]">
                           Face should be clearly visible
                   </p>
                       </div>
@@ -1544,7 +1821,7 @@ export default function SketchIllustrationPage({
                       <path d={svgPathsFigma.p1f995572} fill="#242424" />
                     </svg>
                   </div>
-                  <ol className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505] uppercase list-decimal" start={2}>
+                  <ol className="font-sans font-semibold text-sm text-[#050505] uppercase list-decimal" start={2}>
                     <li className="list-inside ms-1">
                       <span>Photo Purpose</span>
                     </li>
@@ -1552,176 +1829,144 @@ export default function SketchIllustrationPage({
                 </div>
 
               {/* 照片用途选项 */}
-              <div className="grid grid-cols-2 gap-x-0.5 gap-y-2.5 sm:gap-y-3 md:gap-y-3.5 w-full mx-auto justify-items-stretch">
-                {/* Birthday */}
-                  <button
-                  onClick={() => {
-                    setPhotoPurpose('official');
-                    setBackgroundColor('white'); // 默认选择白色
-                  }}
-                    className={`relative w-full aspect-[3/4] rounded-2xl overflow-hidden transition-all group ${
-                    photoPurpose === 'official' 
-                      ? 'ring-[3px] ring-[#333] ring-offset-2 ring-offset-white shadow-lg' 
-                      : 'hover:shadow-lg hover:scale-[1.02]'
-                  }`}
-                >
-                  <img 
-                    src={purposeImages.birthday} 
-                    alt={purposeConfig.birthday.title} 
-                    className={`absolute inset-0 w-full h-[124.49%] max-w-none object-cover transition-transform duration-300 group-hover:scale-105 ${photoPurpose === 'official' ? 'scale-[1.06]' : ''} translate-y-[-4px]`} 
-                    style={{ top: '1.83%' }}
-                  />
-                  <div 
-                    aria-hidden="true" 
-                    className="absolute border-[2.5px] border-solid border-white inset-0 rounded-2xl pointer-events-none" 
-                  />
-                  
-                  {/* Hover 信息遮罩 */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center px-4 text-center">
-                    <p className="font-['Alexandria',sans-serif] font-bold text-sm text-white mb-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                      {purposeConfig.birthday.title}
-                    </p>
-                    <p className="font-['Alexandria',sans-serif] font-medium text-xs text-white/90 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
-                      {purposeConfig.birthday.desc}
-                    </p>
-                </div>
-                
-                  {/* 选中标记 */}
-                  {photoPurpose === 'official' && (
-                    <div className="absolute top-3 right-3 w-6 h-6 bg-[#333] rounded-full flex items-center justify-center shadow-lg">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  )}
-                </button>
+              <div className="w-[70%] mx-auto">
+                <div className="grid grid-cols-2 gap-x-2 gap-y-3.5 sm:gap-y-4 md:gap-y-4.5 w-full mx-auto justify-items-stretch">
+                  {activePurposeOrder.map((purpose) => {
+                    const isActive = photoPurpose === purpose;
+                    const config = purposeConfig[purpose];
+                    const imageSrc = purposeImages[purpose];
+                    const layout = PURPOSE_IMAGE_LAYOUT[purpose] ?? { top: '0%', height: '100%' };
+                    const defaultColor = PURPOSE_DEFAULT_BACKGROUND[purpose] ?? 'none';
+                    return (
+                      <button
+                        key={purpose}
+                        onClick={() => handleSelectPurpose(purpose, defaultColor)}
+                        className={`relative w-full aspect-[3/4] h-40 sm:h-48 rounded-2xl overflow-hidden transition-all group ${
+                          isActive
+                            ? 'ring-[3px] ring-[#333] ring-offset-2 ring-offset-white shadow-lg'
+                            : 'hover:shadow-lg hover:scale-[1.02]'
+                        }`}
+                      >
+                        {imageSrc && (
+                          <img
+                            src={imageSrc}
+                            alt={config?.title ?? purpose}
+                            className={`absolute inset-0 w-full max-w-none object-cover transition-transform duration-300 group-hover:scale-105 group-hover:blur-[1px] ${isActive ? 'scale-[1.06]' : ''} translate-y-[-4px]`}
+                            style={{ top: layout.top, height: layout.height }}
+                          />
+                        )}
+                        <div
+                          aria-hidden="true"
+                          className="absolute border-[2.5px] border-solid border-white inset-0 rounded-2xl pointer-events-none"
+                        />
 
-                {/* New Year */}
-                  <button
-                  onClick={() => {
-                    setPhotoPurpose('professional');
-                    setBackgroundColor('none'); // 默认选择"空"选项
-                  }}
-                    className={`relative w-full aspect-[3/4] rounded-2xl overflow-hidden transition-all group ${
-                      photoPurpose === 'professional' 
-                      ? 'ring-[3px] ring-[#333] ring-offset-2 ring-offset-white shadow-lg' 
-                      : 'hover:shadow-lg hover:scale-[1.02]'
-                  }`}
-                >
-                  <img 
-                    src={purposeImages.newyear} 
-                    alt={purposeConfig.newyear.title} 
-                    className={`absolute inset-0 w-full h-[124.49%] max-w-none object-cover transition-transform duration-300 group-hover:scale-105 ${photoPurpose === 'professional' ? 'scale-[1.06]' : ''} translate-y-[-4px]`} 
-                    style={{ top: '0.04%' }}
-                  />
-                  <div 
-                    aria-hidden="true" 
-                    className="absolute border-[2.5px] border-solid border-white inset-0 rounded-2xl pointer-events-none" 
-                  />
-                  
-                  {/* Hover 信息遮罩 */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center px-4 text-center">
-                    <p className="font-['Alexandria',sans-serif] font-bold text-sm text-white mb-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                      {purposeConfig.newyear.title}
-                    </p>
-                    <p className="font-['Alexandria',sans-serif] font-medium text-xs text-white/90 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
-                      {purposeConfig.newyear.desc}
-                    </p>
-                  </div>
-                  
-                  {/* 选中标记 */}
-                      {photoPurpose === 'professional' && (
-                    <div className="absolute top-3 right-3 w-6 h-6 bg-[#333] rounded-full flex items-center justify-center shadow-lg">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  )}
-                  </button>
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/45 to-black/65 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center px-4 text-center">
+                          <p className="font-sans font-bold text-sm text-white mb-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                            {config?.title ?? purpose}
+                          </p>
+                          <p className="font-sans font-medium text-[11px] text-white/85 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
+                            {config?.desc ?? ''}
+                          </p>
+                        </div>
 
-                {/* Christmas */}
-                  <button
-                  onClick={() => {
-                    setPhotoPurpose('studio');
-                    setBackgroundColor('grey');
-                  }}
-                    className={`relative w-full aspect-[3/4] rounded-2xl overflow-hidden transition-all group md:-translate-y-1 ${
-                    photoPurpose === 'studio' 
-                      ? 'ring-[3px] ring-[#333] ring-offset-2 ring-offset-white shadow-lg' 
-                      : 'hover:shadow-lg hover:scale-[1.02]'
-                  }`}
-                >
-                  <img 
-                    src={purposeImages.christmas} 
-                    alt={purposeConfig.christmas.title} 
-                    className={`absolute inset-0 w-full h-[124.49%] max-w-none object-cover transition-transform duration-300 group-hover:scale-105 ${photoPurpose === 'studio' ? 'scale-[1.06]' : ''} translate-y-[-4px]`} 
-                    style={{ top: '1.83%' }}
-                  />
-                  <div 
-                    aria-hidden="true" 
-                    className="absolute border-[2.5px] border-solid border-white inset-0 rounded-2xl pointer-events-none" 
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/55 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center px-4 text-center">
-                    <p className="font-['Alexandria',sans-serif] font-bold text-sm text-white mb-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                      {purposeConfig.christmas.title}
-                    </p>
-                    <p className="font-['Alexandria',sans-serif] font-medium text-xs text-white/90 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
-                      {purposeConfig.christmas.desc}
-                    </p>
-                </div>
-                  {photoPurpose === 'studio' && (
-                    <div className="absolute top-3 right-3 w-6 h-6 bg-[#333] rounded-full flex items-center justify-center shadow-lg">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-              </div>
-                  )}
-                </button>
-
-                {/* Halloween */}
-                    <button
-                  onClick={() => {
-                    setPhotoPurpose('outdoor');
-                    setBackgroundColor('blue');
-                  }}
-                    className={`relative w-full aspect-[3/4] rounded-2xl overflow-hidden transition-all group md:-translate-y-1 ${
-                    photoPurpose === 'outdoor' 
-                      ? 'ring-[3px] ring-[#333] ring-offset-2 ring-offset-white shadow-lg' 
-                      : 'hover:shadow-lg hover:scale-[1.02]'
-                  }`}
-                >
-                  <img 
-                    src={purposeImages.halloween} 
-                    alt={purposeConfig.halloween.title} 
-                    className={`absolute inset-0 w-full h-[124.49%] max-w-none object-cover transition-transform duration-300 group-hover:scale-105 ${photoPurpose === 'outdoor' ? 'scale-[1.06]' : ''} translate-y-[-4px]`} 
-                    style={{ top: '0.5%' }}
-                  />
-                  <div 
-                    aria-hidden="true" 
-                    className="absolute border-[2.5px] border-solid border-white inset-0 rounded-2xl pointer-events-none" 
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/55 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center px-4 text-center">
-                    <p className="font-['Alexandria',sans-serif] font-bold text-sm text-white mb-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                      {purposeConfig.halloween.title}
-                    </p>
-                    <p className="font-['Alexandria',sans-serif] font-medium text-xs text-white/90 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
-                      {purposeConfig.halloween.desc}
-                    </p>
-                  </div>
-                  {photoPurpose === 'outdoor' && (
-                    <div className="absolute top-3 right-3 w-6 h-6 bg-[#333] rounded-full flex items-center justify-center shadow-lg">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  )}
-                    </button>
+                        {isActive && (
+                          <div className="absolute top-3 right-3 w-6 h-6 bg-[#333] rounded-full flex items-center justify-center shadow-lg">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
+            </div>
+
+              {/* 3. PRODUCT DETAILS */}
+              {showProductFields && (
+                <div className="flex flex-col gap-4 mb-6">
+                  <div className="flex items-center gap-1.5 pl-2">
+                    <div className="w-6 h-6">
+                      <svg className="w-full h-full" fill="none" viewBox="0 0 28 28">
+                        <path d={svgPathsFigma.p3f6d3580} fill="#242424" />
+                      </svg>
+                    </div>
+                    <ol className="font-sans font-semibold text-sm text-[#050505] uppercase list-decimal" start={3}>
+                      <li className="list-inside ms-1">
+                        <span>Product details</span>
+                      </li>
+                    </ol>
+                  </div>
+
+                  <div className="flex flex-col gap-3.5 px-2">
+                    {/* Logo Upload */}
+                    <div className="flex flex-col gap-2">
+                      <label className="font-sans font-medium text-[11px] text-[#666] uppercase tracking-wider pl-1">
+                        Brand Logo
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <label className="cursor-pointer shrink-0">
+                          <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                          <div className="w-12 h-12 rounded-xl border-2 border-dashed border-[#d4d4d4] bg-white hover:bg-[#fafafa] transition-all flex items-center justify-center group overflow-hidden">
+                            {productLogo ? (
+                              <img src={productLogo} className="w-full h-full object-contain p-1" alt="Logo" />
+                            ) : (
+                              <Upload className="w-5 h-5 text-[#999] group-hover:text-[#666]" />
+                            )}
+                          </div>
+                        </label>
+                        <div className="flex flex-col gap-0.5">
+                          <p className="font-sans font-semibold text-xs text-[#050505]">
+                            {productLogo ? 'Logo updated' : 'Upload Logo'}
+                          </p>
+                          <p className="font-sans text-[10px] text-[#999]">
+                            Transparent PNG preferred
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Product Name Input */}
+                    <div className="flex flex-col gap-2">
+                      <label className="font-sans font-medium text-[11px] text-[#666] uppercase tracking-wider pl-1">
+                        Product Name
+                      </label>
+                      <div className="relative group">
+                        <input
+                          type="text"
+                          value={productName}
+                          onChange={(e) => setProductName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && productName.trim()) {
+                              triggerScrollAssist();
+                              (e.target as HTMLInputElement).blur();
+                            }
+                          }}
+                          placeholder="e.g. Ultra Gloss Lipstick"
+                          className="w-full h-10 px-4 pr-10 rounded-xl bg-white border-2 border-[#e5e5e5] focus:border-[#8b5cf6] outline-none font-sans text-sm transition-all"
+                        />
+                        {productName.trim() && (
+                          <button
+                            onClick={() => {
+                              triggerScrollAssist();
+                              // 简单的视觉反馈
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-[#8b5cf6]/10 text-[#8b5cf6] flex items-center justify-center hover:bg-[#8b5cf6] hover:text-white transition-all active:scale-90"
+                            title="Confirm name"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Generate 按钮 */}
               <div className="flex flex-col gap-2 pt-0 pb-10" style={{ marginTop: '-8px' }}>
-                <p className="font-['Alexandria',sans-serif] font-normal text-[10px] text-black">
+                <p className="font-sans font-normal text-[10px] text-black">
                   * Ready to generate a compliant ID photo
                 </p>
                 
@@ -1732,7 +1977,7 @@ export default function SketchIllustrationPage({
                       ? 'bg-blue-50 border-blue-200' 
                       : 'bg-red-50 border-red-200'
                   }`}>
-                    <p className={`font-['Alexandria',sans-serif] font-normal text-xs whitespace-pre-line ${
+                    <p className={`font-sans font-normal text-xs whitespace-pre-line ${
                       errorMessage.startsWith('Demo Mode')
                         ? 'text-blue-600'
                         : 'text-red-600'
@@ -1748,7 +1993,7 @@ export default function SketchIllustrationPage({
                     <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    <span className="font-['Alexandria',sans-serif] text-xs text-amber-800">
+                    <span className="font-sans text-xs text-amber-800">
                       Demo Mode: Only changing background
                     </span>
                   </div>
@@ -1758,7 +2003,7 @@ export default function SketchIllustrationPage({
                       <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      <span className="font-['Alexandria',sans-serif] text-xs text-green-800">
+                      <span className="font-sans text-xs text-green-800">
                         Azure AI Connected
                       </span>
                     </div>
@@ -1766,15 +2011,14 @@ export default function SketchIllustrationPage({
                 )}
                 
                 <motion.button
-                onClick={handleGenerate}
+                  onClick={handleGenerate}
                   disabled={!canGenerate || isGenerating}
-                  className={`h-11 md:h-12 rounded-xl flex items-center justify-center transition-all shadow-lg hover:shadow-xl active:scale-[0.98] ${
-                    isGenerating
-                      ? 'gap-0 bg-gradient-to-r from-[#f4edff] via-[#eadfff] to-[#e0d4ff] cursor-wait'
-                      : canGenerate
-                        ? 'gap-2.5 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] hover:from-[#7c3aed] hover:to-[#6d28d9]'
-                        : 'gap-2.5 bg-[#d4d4d4] cursor-not-allowed'
-                  }`}
+                  className={`h-11 md:h-12 rounded-xl flex items-center justify-center transition-all shadow-lg hover:shadow-xl active:scale-[0.98] ${isGenerating
+                    ? 'gap-2 bg-gradient-to-r from-[#f4edff] via-[#eadfff] to-[#e0d4ff] cursor-wait'
+                    : canGenerate
+                      ? 'gap-2.5 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] hover:from-[#7c3aed] hover:to-[#6d28d9]'
+                      : 'gap-2.5 bg-[#d4d4d4] cursor-not-allowed'
+                    }`}
                   animate={canGenerate && !isGenerating ? {
                     boxShadow: [
                       '0 8px 22px -6px rgba(139, 92, 246, 0.22)',
@@ -1787,15 +2031,27 @@ export default function SketchIllustrationPage({
                     repeat: Infinity,
                     ease: "easeInOut"
                   }}
-              >
+                >
                   {isGenerating ? (
-                    <GeneratingLottie size={40} />
+                    <>
+                      <div className="w-[25px] h-[25px] flex items-center justify-center">
+                        <GeneratingLottie size={6.2} />
+                      </div>
+                      <motion.span
+                        initial={{ opacity: 0.25 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 1.4, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+                        className="font-sans font-semibold text-sm md:text-base text-[#5b21b6]"
+                      >
+                        Generating
+                      </motion.span>
+                    </>
                   ) : (
                     <>
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 20 20">
                         <path d={svgPathsFigma.p1a8c2ac0} fill="white" fillOpacity="0.9" />
                       </svg>
-                      <span className="font-['Alexandria',sans-serif] font-semibold text-sm md:text-base text-white">
+                      <span className="font-sans font-semibold text-sm md:text-base text-white">
                         Generate
                       </span>
                     </>
@@ -1904,7 +2160,7 @@ export default function SketchIllustrationPage({
                           duration: 0.6, 
                           ease: [0.16, 1, 0.3, 1]
                         }}
-                        className="font-['Alexandria',sans-serif] font-semibold text-lg md:text-xl text-[#050505] min-h-[70px] flex items-center justify-center px-4"
+                        className="font-sans font-semibold text-lg md:text-xl text-[#050505] min-h-[70px] flex items-center justify-center px-4"
                       >
                         {waitingMessages[currentMessageIndex].text}
                       </motion.p>
@@ -1950,10 +2206,10 @@ export default function SketchIllustrationPage({
                         </svg>
                 </div>
                       <div className="flex flex-col gap-1.5 text-center">
-                        <p className="font-['Alexandria',sans-serif] font-semibold text-sm md:text-base text-[#050505]">
+                        <p className="font-sans font-semibold text-sm md:text-base text-[#050505]">
                           Image Preview
                         </p>
-                        <p className="font-['Alexandria',sans-serif] font-normal text-xs md:text-sm text-[#999]">
+                        <p className="font-sans font-normal text-xs md:text-sm text-[#999]">
                           Your generated photo will appear here
                   </p>
                 </div>
@@ -1981,7 +2237,7 @@ export default function SketchIllustrationPage({
                       <path d={svgPaths.p22b6d800} fill="#050505" />
                     </svg>
                   )}
-                  <span className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
+                  <span className="font-sans font-semibold text-sm text-[#050505]">
                     {isGenerating ? 'Generating...' : 'Regenerate'}
                   </span>
                 </button>
@@ -1999,7 +2255,7 @@ export default function SketchIllustrationPage({
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 10 13">
                     <path d={svgPaths.p2f9c1e00} fill="white" />
                   </svg>
-                  <span className="font-['Alexandria',sans-serif] font-semibold text-sm text-white">
+                  <span className="font-sans font-semibold text-sm text-white">
                     Download
                   </span>
                 </button>
@@ -2014,19 +2270,19 @@ export default function SketchIllustrationPage({
                   className="w-full"
                 >
                   <div className="flex items-center justify-between mb-2.5">
-                    <h3 className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
+                    <h3 className="font-sans font-semibold text-sm text-[#050505]">
                       History ({imageHistory.length})
                     </h3>
                     <button
                       onClick={() => setImageHistory([])}
-                      className="font-['Alexandria',sans-serif] font-medium text-xs text-[#999] hover:text-[#666] transition-colors"
+                      className="font-sans font-medium text-xs text-[#999] hover:text-[#666] transition-colors"
                     >
                       Clear All
                     </button>
                   </div>
                   
                   {/* 横向滚动的缩略图���表 - Portrait 比例 */}
-                  <div className="relative w-full overflow-x-auto scrollbar-hide px-1 py-2">
+                  <div className="relative w-full overflow-x-auto scrollbar-hide px-3 py-2">
                     <div className="flex gap-2.5 pb-2">
                       {imageHistory.map((item) => (
                         <motion.div
@@ -2063,7 +2319,7 @@ export default function SketchIllustrationPage({
                           
                           {/* 时间标签 */}
                           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-1.5 py-1">
-                            <p className="font-['Alexandria',sans-serif] font-medium text-[9px] text-white truncate">
+                            <p className="font-sans font-medium text-[9px] text-white truncate">
                               {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>
@@ -2100,10 +2356,10 @@ export default function SketchIllustrationPage({
                     <Key className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="font-['Alexandria',sans-serif] font-bold text-lg text-[#050505]">
+                    <h2 className="font-sans font-bold text-lg text-[#050505]">
                       API Configuration
                     </h2>
-                    <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666]">
+                    <p className="font-sans font-normal text-xs text-[#666]">
                       Connect your AI image generation service
                     </p>
                   </div>
@@ -2121,24 +2377,35 @@ export default function SketchIllustrationPage({
 
                 {/* API Endpoint 输入 */}
                 <div className="flex flex-col gap-2">
-                  <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
+                  <label className="font-sans font-semibold text-sm text-[#050505]">
                     API Endpoint URL
                   </label>
                   <input
                     type="text"
                     value={apiUrl}
-                    onChange={(e) => setApiUrl(e.target.value)}
+                    onChange={(e) => {
+                      const newUrl = e.target.value;
+                      setApiUrl(newUrl);
+                      if (errorMessage) setErrorMessage(null);
+
+                      if (newUrl.includes('/deployments/')) {
+                        const match = newUrl.match(/\/deployments\/([^/]+)/i);
+                        if (match && match[1]) {
+                          setDeploymentId(match[1]);
+                        }
+                      }
+                    }}
                     placeholder="https://api.example.com"
-                    className="w-full h-11 px-4 bg-white border border-[#d4d4d4] rounded-xl font-['Alexandria',sans-serif] text-sm text-[#050505] placeholder:text-[#999] focus:outline-none focus:ring-2 focus:ring-[#333] focus:border-transparent transition-all"
+                    className="w-full h-11 px-4 bg-white border border-[#d4d4d4] rounded-xl font-sans text-sm text-[#050505] placeholder:text-[#999] focus:outline-none focus:ring-2 focus:ring-[#333] focus:border-transparent transition-all"
                   />
-                  <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666]">
-                    Your API service endpoint URL
+                  <p className="font-sans font-normal text-xs text-[#666]">
+                    Your API service endpoint URL. Azure users can paste the full endpoint containing /deployments/your-deployment-name; we auto-detect the deployment.
                   </p>
                 </div>
 
                 {/* API Key 输入 */}
                 <div className="flex flex-col gap-2">
-                  <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
+                  <label className="font-sans font-semibold text-sm text-[#050505]">
                     API Key
                   </label>
                   <div className="relative">
@@ -2147,7 +2414,7 @@ export default function SketchIllustrationPage({
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
                       placeholder="Your API Key"
-                      className="w-full h-11 px-4 pr-12 bg-white border border-[#d4d4d4] rounded-xl font-['Alexandria',sans-serif] text-sm text-[#050505] placeholder:text-[#999] focus:outline-none focus:ring-2 focus:ring-[#333] focus:border-transparent transition-all"
+                      className="w-full h-11 px-4 pr-12 bg-white border border-[#d4d4d4] rounded-xl font-sans text-sm text-[#050505] placeholder:text-[#999] focus:outline-none focus:ring-2 focus:ring-[#333] focus:border-transparent transition-all"
                     />
                     <button
                       type="button"
@@ -2161,40 +2428,14 @@ export default function SketchIllustrationPage({
                       )}
                     </button>
                   </div>
-                  <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#999]">
+                  <p className="font-sans font-normal text-xs text-[#999]">
                     Your API key will be stored locally and never shared
-                  </p>
-                </div>
-
-                {/* Deployment ID 输入 - 带 Refine 按钮 */}
-                <div className="flex flex-col gap-2">
-                  <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
-                    Deployment Name
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={deploymentId}
-                      onChange={(e) => setDeploymentId(e.target.value.trim())}
-                      placeholder="gpt-image-1.5"
-                      className="flex-1 h-11 px-4 bg-white border border-[#d4d4d4] rounded-xl font-['Alexandria',sans-serif] text-sm text-[#050505] placeholder:text-[#999] focus:outline-none focus:ring-2 focus:ring-[#333] focus:border-transparent transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setDeploymentId('gpt-image-1.5')}
-                      className="h-11 px-4 bg-[#333] hover:bg-[#444] text-white rounded-xl font-['Alexandria',sans-serif] font-semibold text-sm transition-all active:scale-95 whitespace-nowrap"
-                    >
-                      Refine
-                    </button>
-                  </div>
-                  <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666]">
-                    Optional. Only needed for Azure OpenAI services.
                   </p>
                 </div>
 
                 {/* 错误信息 */}
                 {errorMessage && (
-                  <p className="font-['Alexandria',sans-serif] font-normal text-xs text-red-500">
+                  <p className="font-sans font-normal text-xs text-red-500">
                     {errorMessage}
                   </p>
                 )}
@@ -2207,385 +2448,45 @@ export default function SketchIllustrationPage({
                     setShowApiModal(false);
                     setShowApiKey(false);
                   }}
-                  className="flex-1 h-11 bg-white border border-[#d4d4d4] rounded-xl font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505] hover:bg-[#f5f5f5] hover:border-[#c4c4c4] active:scale-[0.98] transition-all"
+                  className="flex-1 h-11 bg-white border border-[#d4d4d4] rounded-xl font-sans font-semibold text-sm text-[#050505] hover:bg-[#f5f5f5] hover:border-[#c4c4c4] active:scale-[0.98] transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => {
-                    // 验证配置
-                    const isAzureService = apiUrl.includes('.cognitiveservices.azure.com') || apiUrl.includes('.openai.azure.com');
-                    if (isAzureService && !deploymentId.trim()) {
-                      setErrorMessage('Deployment Name is required for Azure services (e.g., gpt-image-1.5)');
+                    const trimmedUrl = apiUrl.trim();
+                    const trimmedDeployment = deploymentId.trim();
+                    const isAzureService = trimmedUrl.includes('.cognitiveservices.azure.com') || trimmedUrl.includes('.openai.azure.com');
+
+                    const extractDeploymentFromUrl = (url: string): string => {
+                      const match = url.match(/\/deployments\/([^/]+)/i);
+                      return match && match[1] ? match[1] : '';
+                    };
+
+                    const derivedDeployment = trimmedDeployment || extractDeploymentFromUrl(trimmedUrl);
+
+                    if (isAzureService && !derivedDeployment) {
+                      setErrorMessage('Azure endpoints need a deployment name. Paste the full endpoint that includes /deployments/{name}.');
                       return;
                     }
-                    
-                  // 保存 API 配置到 localStorage（全局 + 该页面前缀）
-                  localStorage.setItem('global_api_key', apiKey);
-                  localStorage.setItem('sketch_api_key', apiKey);
-                    localStorage.setItem('sketch_api_url', apiUrl);
-                    localStorage.setItem('sketch_deployment_id', deploymentId);
-                    localStorage.setItem('sketch_api_type', apiType);
+
+                    const deploymentToPersist = derivedDeployment;
+                    if (!trimmedDeployment && deploymentToPersist) {
+                      setDeploymentId(deploymentToPersist);
+                    }
+
+                    localStorage.setItem('global_api_key', apiKey.trim());
+                    localStorage.setItem('global_api_url', trimmedUrl);
+                    localStorage.setItem('global_api_deployment_id', deploymentToPersist);
+                    localStorage.setItem('global_api_type', apiType);
                     setShowApiModal(false);
                     setShowApiKey(false);
                     setErrorMessage(null);
                   }}
-                  className="flex-1 h-11 bg-[#333] rounded-xl font-['Alexandria',sans-serif] font-semibold text-sm text-white hover:bg-[#222] active:scale-[0.98] transition-all shadow-lg"
+                  className="flex-1 h-11 bg-[#333] rounded-xl font-sans font-semibold text-sm text-white hover:bg-[#222] active:scale-[0.98] transition-all shadow-lg"
                 >
                   Save Configuration
                 </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Prompt 设置弹窗 */}
-      <AnimatePresence>
-        {showPromptModal && (
-          <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4"
-            onClick={() => {
-              setShowPromptModal(false);
-              resetPasswordState();
-            }}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col mx-4"
-            >
-              {/* 弹窗头部 */}
-              <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-[#e5e5e5] flex-shrink-0">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#333] flex items-center justify-center">
-                    <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="font-['Alexandria',sans-serif] font-bold text-base sm:text-lg text-[#050505]">
-                      Prompt Configuration
-                    </h2>
-                    <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666] hidden sm:block">
-                      Customize the prompt for image generation
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowPromptModal(false);
-                    resetPasswordState();
-                  }}
-                  className="w-8 h-8 rounded-lg hover:bg-black/5 active:bg-black/10 transition-all flex items-center justify-center group flex-shrink-0"
-                >
-                  <X className="w-5 h-5 transition-transform group-hover:scale-110 group-hover:rotate-90" />
-                </button>
-              </div>
-
-              {/* 弹窗内容 - 可滚动区域 */}
-              <div className="px-4 sm:px-6 py-4 sm:py-5 flex flex-col gap-4 sm:gap-5 overflow-y-auto">
-                {!isPromptUnlocked ? (
-                  /* 密码输入界面 */
-                  <div className="flex flex-col items-center justify-center py-8 sm:py-12 gap-6">
-                    <div className="w-16 h-16 rounded-2xl bg-[#333] flex items-center justify-center">
-                      <Key className="w-8 h-8 text-white" />
-                    </div>
-                    <div className="text-center">
-                      <h3 className="font-['Alexandria',sans-serif] font-bold text-lg text-[#050505] mb-2">
-                        Enter Password
-                      </h3>
-                      <p className="font-['Alexandria',sans-serif] text-sm text-[#666]">
-                        Enter 4-digit password to edit prompts
-                      </p>
-                    </div>
-                    
-                    {/* 4位密码输入框 */}
-                    <div className="flex gap-3 sm:gap-4">
-                      {[0, 1, 2, 3].map((index) => (
-                        <input
-                          key={index}
-                          ref={passwordInputRefs[index]}
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={1}
-                          value={promptPassword[index]}
-                          onChange={(e) => handlePasswordInput(index, e.target.value)}
-                          onKeyDown={(e) => handlePasswordKeyDown(index, e)}
-                          className={`w-12 h-14 sm:w-16 sm:h-20 text-center text-2xl sm:text-3xl font-bold border-2 rounded-xl transition-all focus:outline-none focus:ring-2 ${
-                            passwordError 
-                              ? 'border-red-500 bg-red-50 text-red-600 focus:ring-red-500 animate-shake' 
-                              : 'border-[#d4d4d4] bg-white text-[#050505] focus:border-[#333] focus:ring-[#333]'
-                          }`}
-                          autoFocus={index === 0}
-                        />
-                      ))}
-                    </div>
-                    
-                    {passwordError && (
-                      <motion.p 
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="font-['Alexandria',sans-serif] text-sm text-red-600 font-semibold"
-                      >
-                        ❌ Incorrect password. Please try again.
-                      </motion.p>
-                    )}
-                  </div>
-                ) : (
-                  <>
-                {/* Reference Images for Official */}
-                <div className="flex flex-col gap-2 sm:gap-3">
-                  <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
-                    Reference Images (Official)
-                  </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
-                    {[0, 1, 2, 3, 4].map((index) => (
-                      <div key={index} className="relative aspect-square">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleReferenceImageUpload(index, true)}
-                          className="hidden"
-                          id={`ref-img-official-${index}`}
-                        />
-                        {tempReferenceImagesOfficial[index] ? (
-                          <div className="relative w-full h-full group">
-                            <img
-                              src={tempReferenceImagesOfficial[index]!}
-                              alt={`Reference ${index + 1}`}
-                              className="w-full h-full object-cover rounded-lg border-2 border-[#d4d4d4]"
-                            />
-                            <button
-                              onClick={() => removeReferenceImage(index, true)}
-                              className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 w-5 h-5 sm:w-6 sm:h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="w-3 h-3 sm:w-4 sm:h-4" />
-                            </button>
-                            <div className="absolute bottom-0.5 left-0.5 sm:bottom-1 sm:left-1 bg-black/60 text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded">
-                              image {String(index + 1).padStart(2, '0')}
-                            </div>
-                          </div>
-                        ) : (
-                          <label
-                            htmlFor={`ref-img-official-${index}`}
-                            className="w-full h-full border-2 border-dashed border-[#d4d4d4] rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#333] hover:bg-[#fafafa] transition-all"
-                          >
-                            <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-[#999] mb-0.5 sm:mb-1" />
-                            <span className="text-[10px] sm:text-xs text-[#999] font-['Alexandria',sans-serif]">
-                              image {String(index + 1).padStart(2, '0')}
-                            </span>
-                          </label>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Prompt 输入 */}
-                <div className="flex flex-col gap-2">
-                  <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
-                    Custom Prompt (Official)
-                  </label>
-                  <textarea
-                    value={tempPromptOfficial}
-                    onChange={(e) => setTempPromptOfficial(e.target.value)}
-                    placeholder="Enter your custom prompt here... (Leave empty to use default prompt)"
-                    className="w-full h-32 sm:h-40 px-3 sm:px-4 py-2 sm:py-3 bg-white border border-[#d4d4d4] rounded-xl font-['Alexandria',sans-serif] text-sm text-[#050505] placeholder:text-[#999] focus:outline-none focus:ring-2 focus:ring-[#333] focus:border-transparent transition-all resize-none"
-                  />
-                  <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666]">
-                    {tempPromptOfficial ? `Using custom prompt (${tempPromptOfficial.length} chars${tempPromptOfficial.length > 500 ? `, ${tempPromptOfficial.length - 500} over recommended` : ''})` : 'Using default optimized prompt (~100 chars)'}
-                  </p>
-                </div>
-
-                {/* Reference Images for Professional */}
-                <div className="flex flex-col gap-2 sm:gap-3">
-                  <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
-                    Reference Images (Professional)
-                  </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
-                    {[0, 1, 2, 3, 4].map((index) => (
-                      <div key={index} className="relative aspect-square">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleReferenceImageUpload(index, false)}
-                          className="hidden"
-                          id={`ref-img-professional-${index}`}
-                        />
-                        {tempReferenceImagesProfessional[index] ? (
-                          <div className="relative w-full h-full group">
-                            <img
-                              src={tempReferenceImagesProfessional[index]!}
-                              alt={`Reference ${index + 1}`}
-                              className="w-full h-full object-cover rounded-lg border-2 border-[#d4d4d4]"
-                            />
-                            <button
-                              onClick={() => removeReferenceImage(index, false)}
-                              className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 w-5 h-5 sm:w-6 sm:h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="w-3 h-3 sm:w-4 sm:h-4" />
-                            </button>
-                            <div className="absolute bottom-0.5 left-0.5 sm:bottom-1 sm:left-1 bg-black/60 text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded">
-                              image {String(index + 1).padStart(2, '0')}
-                            </div>
-                          </div>
-                        ) : (
-                          <label
-                            htmlFor={`ref-img-professional-${index}`}
-                            className="w-full h-full border-2 border-dashed border-[#d4d4d4] rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#333] hover:bg-[#fafafa] transition-all"
-                          >
-                            <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-[#999] mb-0.5 sm:mb-1" />
-                            <span className="text-[10px] sm:text-xs text-[#999] font-['Alexandria',sans-serif]">
-                              image {String(index + 1).padStart(2, '0')}
-                            </span>
-                          </label>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Prompt 输入 */}
-                <div className="flex flex-col gap-2">
-                  <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505]">
-                    Custom Prompt (Professional)
-                  </label>
-                  <textarea
-                    value={tempPromptProfessional}
-                    onChange={(e) => setTempPromptProfessional(e.target.value)}
-                    placeholder="Enter your custom prompt here... (Leave empty to use default prompt)"
-                    className="w-full h-32 sm:h-40 px-3 sm:px-4 py-2 sm:py-3 bg-white border border-[#d4d4d4] rounded-xl font-['Alexandria',sans-serif] text-sm text-[#050505] placeholder:text-[#999] focus:outline-none focus:ring-2 focus:ring-[#333] focus:border-transparent transition-all resize-none"
-                  />
-                  <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666]">
-                    {tempPromptProfessional ? `Using custom prompt (${tempPromptProfessional.length} chars${tempPromptProfessional.length > 500 ? `, ${tempPromptProfessional.length - 500} over recommended` : ''})` : 'Using default optimized prompt (~100 chars)'}
-                  </p>
-                </div>
-
-                {/* 🎛️ Flux 图生图参数调节器 */}
-                <div className="hidden p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl flex flex-col gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="font-['Alexandria',sans-serif] font-bold text-sm text-blue-900">
-                        🎯 Image-to-Image Parameters
-                      </h3>
-                      <p className="font-['Alexandria',sans-serif] text-xs text-blue-700">
-                        Fine-tune how much to preserve from your original photo
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Strength 滑块 */}
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-blue-900">
-                        Strength (保留程度)
-                      </label>
-                      <span className="font-['Alexandria',sans-serif] font-bold text-sm text-blue-600 px-3 py-1 bg-white rounded-lg">
-                        {fluxStrength.toFixed(2)}
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0.1"
-                      max="0.7"
-                      step="0.05"
-                      value={fluxStrength}
-                      onChange={(e) => setFluxStrength(parseFloat(e.target.value))}
-                      className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-600 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-lg"
-                    />
-                    <div className="flex items-center justify-between">
-                      <span className="font-['Alexandria',sans-serif] text-xs text-blue-700">
-                        0.1 (最大保留原图)
-                      </span>
-                      <span className="font-['Alexandria',sans-serif] text-xs text-blue-700">
-                        0.7 (大幅改变)
-                      </span>
-                    </div>
-                    <p className="font-['Alexandria',sans-serif] text-xs text-blue-600 bg-white px-3 py-2 rounded-lg">
-                      💡 <strong>推荐 0.4-0.6</strong> 平衡保留人物与风格改变。当前: {fluxStrength < 0.4 ? '⚠️ 偏低，改变较少' : fluxStrength < 0.65 ? '✅ 很好' : '❌ 过高，可能丢失人物'}
-                    </p>
-                  </div>
-
-                  {/* Guidance Scale 滑块 */}
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <label className="font-['Alexandria',sans-serif] font-semibold text-sm text-blue-900">
-                        Guidance Scale (引导强度)
-                      </label>
-                      <span className="font-['Alexandria',sans-serif] font-bold text-sm text-blue-600 px-3 py-1 bg-white rounded-lg">
-                        {fluxGuidanceScale.toFixed(1)}
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      min="3.0"
-                      max="12.0"
-                      step="0.5"
-                      value={fluxGuidanceScale}
-                      onChange={(e) => setFluxGuidanceScale(parseFloat(e.target.value))}
-                      className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-600 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-lg"
-                    />
-                    <div className="flex items-center justify-between">
-                      <span className="font-['Alexandria',sans-serif] text-xs text-blue-700">
-                        3.0 (更自然)
-                      </span>
-                      <span className="font-['Alexandria',sans-serif] text-xs text-blue-700">
-                        12.0 (严格遵循)
-                      </span>
-                    </div>
-                    <p className="font-['Alexandria',sans-serif] text-xs text-blue-600 bg-white px-3 py-2 rounded-lg">
-                      💡 <strong>推荐 7.0-8.0</strong> 以平衡 prompt 和原图。当前: {fluxGuidanceScale >= 7 && fluxGuidanceScale <= 8.5 ? '✅ 很好' : '⚠️ 可以调整'}
-                    </p>
-                  </div>
-                </div>
-              </>
-                )}
-              </div>
-
-              {/* 弹窗底部按钮 */}
-              <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 bg-[#fafafa] border-t border-[#e5e5e5] flex-shrink-0">
-                <button
-                  onClick={() => {
-                    setShowPromptModal(false);
-                    resetPasswordState();
-                    setTempPromptOfficial(customPromptOfficial);
-                    setTempPromptProfessional(customPromptProfessional);
-                    setTempReferenceImagesOfficial([...referenceImagesOfficial]);
-                    setTempReferenceImagesProfessional([...referenceImagesProfessional]);
-                  }}
-                  className="flex-1 h-10 sm:h-11 bg-white border border-[#d4d4d4] rounded-xl font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505] hover:bg-[#f5f5f5] hover:border-[#c4c4c4] active:scale-[0.98] transition-all"
-                >
-                  Cancel
-                </button>
-                {isPromptUnlocked && (
-                  <button
-                    onClick={() => {
-                      // 保存自定义 prompt 到 localStorage
-                      setCustomPromptOfficial(tempPromptOfficial);
-                      setCustomPromptProfessional(tempPromptProfessional);
-                      setReferenceImagesOfficial([...tempReferenceImagesOfficial]);
-                      setReferenceImagesProfessional([...tempReferenceImagesProfessional]);
-                      localStorage.setItem('sketch_prompt_official', tempPromptOfficial);
-                      localStorage.setItem('sketch_prompt_professional', tempPromptProfessional);
-                      localStorage.setItem('sketch_ref_images_official', JSON.stringify(tempReferenceImagesOfficial));
-                      localStorage.setItem('sketch_ref_images_professional', JSON.stringify(tempReferenceImagesProfessional));
-                      localStorage.setItem('sketch_flux_strength', fluxStrength.toString());
-                      localStorage.setItem('sketch_flux_guidance_scale', fluxGuidanceScale.toString());
-                      setShowPromptModal(false);
-                      resetPasswordState();
-                    }}
-                    className="flex-1 h-10 sm:h-11 bg-[#333] rounded-xl font-['Alexandria',sans-serif] font-semibold text-sm text-white hover:bg-[#222] active:scale-[0.98] transition-all shadow-lg"
-                  >
-                    Save Prompt
-                  </button>
-                )}
               </div>
             </motion.div>
           </div>
@@ -2616,10 +2517,10 @@ export default function SketchIllustrationPage({
                     </svg>
                   </div>
                   <div>
-                    <h2 className="font-['Alexandria',sans-serif] font-bold text-lg text-red-600">
+                    <h2 className="font-sans font-bold text-lg text-red-600">
                       Content Safety Alert
                     </h2>
-                    <p className="font-['Alexandria',sans-serif] font-normal text-xs text-[#666]">
+                    <p className="font-sans font-normal text-xs text-[#666]">
                       Request blocked by safety system
                     </p>
                   </div>
@@ -2635,15 +2536,15 @@ export default function SketchIllustrationPage({
               {/* 弹窗内容 */}
               <div className="px-6 py-6 flex flex-col gap-4">
                 <div className="flex flex-col gap-3">
-                  <p className="font-['Alexandria',sans-serif] text-sm text-[#333] leading-relaxed">
+                  <p className="font-sans text-sm text-[#333] leading-relaxed">
                     {safetyErrorMessage}
                   </p>
                   
                   <div className="mt-2 p-4 bg-red-50 border border-red-100 rounded-xl">
-                    <p className="font-['Alexandria',sans-serif] font-semibold text-sm text-[#050505] mb-2">
+                    <p className="font-sans font-semibold text-sm text-[#050505] mb-2">
                       💡 Tips:
                     </p>
-                    <ul className="font-['Alexandria',sans-serif] text-xs text-[#666] space-y-1.5 list-disc list-inside">
+                    <ul className="font-sans text-xs text-[#666] space-y-1.5 list-disc list-inside">
                       <li>Make sure your photo is a clear portrait</li>
                       <li>Avoid images with inappropriate content</li>
                       <li>Use professional-looking photos</li>
@@ -2657,7 +2558,7 @@ export default function SketchIllustrationPage({
               <div className="flex items-center gap-3 px-6 py-4 bg-[#fafafa] border-t border-[#e5e5e5]">
                 <button
                   onClick={() => setShowSafetyModal(false)}
-                  className="flex-1 h-11 bg-[#050505] rounded-xl font-['Alexandria',sans-serif] font-semibold text-sm text-white hover:bg-[#333] active:scale-[0.98] transition-all"
+                  className="flex-1 h-11 bg-[#050505] rounded-xl font-sans font-semibold text-sm text-white hover:bg-[#333] active:scale-[0.98] transition-all"
                 >
                   Got it
                 </button>
@@ -2680,7 +2581,7 @@ export default function SketchIllustrationPage({
             <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d2d] border-b border-[#333]">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-[#22c55e]"></div>
-                <span className="font-['Alexandria',sans-serif] font-semibold text-xs text-white">
+                <span className="font-sans font-semibold text-xs text-white">
                   Console Log
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-[#333] text-[10px] font-bold text-white">

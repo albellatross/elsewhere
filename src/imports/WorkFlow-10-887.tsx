@@ -53,8 +53,8 @@ type ContentBackgroundImageProps = {
 function ContentBackgroundImage({ text, text1 }: ContentBackgroundImageProps) {
   return (
     <div className="content-stretch flex flex-col gap-[15px] items-start leading-[normal] relative shrink-0 text-[#050505] w-full">
-      <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold relative shrink-0 text-[20px] w-full">{text}</p>
-      <p className="font-['Alexandria:Regular',sans-serif] font-normal relative shrink-0 text-[16px] w-full">{text1}</p>
+      <p className="font-sans font-semibold relative shrink-0 text-[20px] w-full">{text}</p>
+      <p className="font-sans font-normal relative shrink-0 text-[16px] w-full">{text1}</p>
     </div>
   );
 }
@@ -140,7 +140,7 @@ export default function WorkFlow() {
           <div className="content-stretch flex flex-col gap-[70px] items-start relative shrink-0" data-name="text">
             <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0">
               <div className="content-stretch flex items-center justify-center relative shrink-0" data-name="title">
-                <p className="font-['Alexandria:Bold',sans-serif] font-bold leading-[72px] relative shrink-0 text-[#0b0b0b] text-[80px] text-nowrap">Rem</p>
+                <p className="font-sans font-bold leading-[72px] relative shrink-0 text-[#0b0b0b] text-[80px] text-nowrap">Rem</p>
                 <div className="relative shrink-0 size-[80px]" data-name="pen">
                   <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 80 80">
                     <g clipPath="url(#clip0_11_925)" id="pen">
@@ -159,13 +159,13 @@ export default function WorkFlow() {
                     </defs>
                   </svg>
                 </div>
-                <p className="font-['Alexandria:Bold',sans-serif] font-bold leading-[72px] relative shrink-0 text-[#0b0b0b] text-[80px] text-nowrap">x Reality.</p>
+                <p className="font-sans font-bold leading-[72px] relative shrink-0 text-[#0b0b0b] text-[80px] text-nowrap">x Reality.</p>
               </div>
-              <p className="font-['Alexandria:Medium',sans-serif] font-medium leading-[72px] relative shrink-0 text-[#8e8e93] text-[80px] text-nowrap">Not Identity.</p>
+              <p className="font-sans font-medium leading-[72px] relative shrink-0 text-[#8e8e93] text-[80px] text-nowrap">Not Identity.</p>
             </div>
             <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0 text-nowrap">
-              <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[28px] relative shrink-0 text-[#1c1c1e] text-[24px]">Same you. New worlds.</p>
-              <div className="font-['Alexandria:Regular',sans-serif] font-normal leading-[24px] relative shrink-0 text-[#5f5f66] text-[20px]">
+              <p className="font-sans font-semibold leading-[28px] relative shrink-0 text-[#1c1c1e] text-[24px]">Same you. New worlds.</p>
+              <div className="font-sans font-normal leading-[24px] relative shrink-0 text-[#5f5f66] text-[20px]">
                 <p className="mb-0">Drop a photo in. Remix the world around you.</p>
                 <p>No prompts. No face swaps. No weird AI vibes.</p>
               </div>
@@ -175,7 +175,7 @@ export default function WorkFlow() {
             <SparkleBackgroundImage>
               <path d={svgPaths.p124ef7b0} fill="var(--fill-0, white)" fillOpacity="0.9" id="Shape" />
             </SparkleBackgroundImage>
-            <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[16px] text-[rgba(255,255,255,0.9)] text-nowrap">Try it now</p>
+            <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[16px] text-[rgba(255,255,255,0.9)] text-nowrap">Try it now</p>
           </div>
         </div>
         <div className="absolute h-[50px] left-[132px] top-[45px] w-[125.179px]" data-name="logo">
@@ -206,7 +206,7 @@ export default function WorkFlow() {
             <SparkleBackgroundImage>
               <path d={svgPaths.p124ef7b0} fill="var(--fill-0, #050505)" id="Shape" />
             </SparkleBackgroundImage>
-            <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Create</p>
+            <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Create</p>
           </div>
           <div className="content-stretch flex gap-[10px] h-[44px] items-center justify-center pl-[20px] pr-[24px] py-[12px] relative rounded-[999px] shrink-0 w-[150px]" data-name="Templates button">
             <BackgroundImage>
@@ -214,7 +214,7 @@ export default function WorkFlow() {
                 <path d={svgPaths.p2853cd00} fill="var(--fill-0, #050505)" id="Shape" />
               </g>
             </BackgroundImage>
-            <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Templates</p>
+            <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Templates</p>
           </div>
           <div className="content-stretch flex gap-[10px] h-[44px] items-center justify-center pl-[20px] pr-[24px] py-[12px] relative rounded-[999px] shrink-0 w-[150px]" data-name="Studio button">
             <div aria-hidden="true" className="absolute border border-[rgba(31,31,31,0.1)] border-solid inset-0 pointer-events-none rounded-[999px]" />
@@ -223,12 +223,12 @@ export default function WorkFlow() {
                 <path d={svgPaths.p120bce80} fill="var(--fill-0, #050505)" id="Shape" />
               </g>
             </BackgroundImage>
-            <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Studio</p>
+            <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[#050505] text-[16px] text-nowrap">Studio</p>
           </div>
         </div>
         <div className="absolute content-stretch flex flex-col h-[60px] items-center justify-between left-[calc(50%+0.5px)] pb-0 pt-[10px] px-0 shadow-[0px_4px_4px_0px_rgba(255,255,255,0.7)] top-[1025px] translate-x-[-50%] w-[261px]" data-name="Scroll to explore more templates">
           <div className="absolute h-[41px] left-[calc(50%-0.5px)] opacity-90 top-[calc(50%-9.5px)] translate-x-[-50%] translate-y-[-50%] w-[260px]" style={{ backgroundImage: "url('data:image/svg+xml;utf8,<svg viewBox=\\\'0 0 260 41\\\' xmlns=\\\'http://www.w3.org/2000/svg\\\' preserveAspectRatio=\\\'none\\\'><rect x=\\\'0\\\' y=\\\'0\\\' height=\\\'100%\\\' width=\\\'100%\\\' fill=\\\'url(%23grad)\\\' opacity=\\\'1\\\'/><defs><radialGradient id=\\\'grad\\\' gradientUnits=\\\'userSpaceOnUse\\\' cx=\\\'0\\\' cy=\\\'0\\\' r=\\\'10\\\' gradientTransform=\\\'matrix(13 -3.2558e-8 6.9261e-9 2.05 130 20.873)\\\'><stop stop-color=\\\'rgba(255,255,255,1)\\\' offset=\\\'0.55939\\\'/><stop stop-color=\\\'rgba(255,255,255,0)\\\' offset=\\\'1\\\'/></radialGradient></defs></svg>')" }} />
-          <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 text-[#242424] text-[14px] text-nowrap">Scroll to explore more</p>
+          <p className="font-sans font-normal leading-[normal] relative shrink-0 text-[#242424] text-[14px] text-nowrap">Scroll to explore more</p>
           <div className="relative shrink-0 size-[32px]" data-name="Chevron">
             <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 32 32">
               <g id="Chevron">
@@ -242,8 +242,8 @@ export default function WorkFlow() {
         <div className="content-stretch flex flex-col gap-[30px] items-start relative shrink-0" data-name="content">
           <div className="content-stretch flex items-end justify-between relative shrink-0 w-full">
             <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0 w-[699px]" data-name="title">
-              <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[28px] relative shrink-0 text-[#1c1c1e] text-[24px] text-nowrap">Create images that fit real moments</p>
-              <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[24px] relative shrink-0 text-[#5f5f66] text-[20px] w-[685px]">Professional, personal, or playful — start with a template and shape the result your way.</p>
+              <p className="font-sans font-semibold leading-[28px] relative shrink-0 text-[#1c1c1e] text-[24px] text-nowrap">Create images that fit real moments</p>
+              <p className="font-sans font-normal leading-[24px] relative shrink-0 text-[#5f5f66] text-[20px] w-[685px]">Professional, personal, or playful — start with a template and shape the result your way.</p>
             </div>
             <div className="content-stretch flex gap-[30px] items-start relative shrink-0">
               <ChevronBackgroundImage>
@@ -263,7 +263,7 @@ export default function WorkFlow() {
                 </CardBackgroundImage>
                 <ContentBackgroundImage text="ID Photo" text1="Clean, compliant photos for official use" />
               </div>
-              <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Passport · Visa · Resume</p>
+              <p className="font-sans font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Passport · Visa · Resume</p>
             </div>
             <div className="bg-[#fafafa] content-stretch flex flex-col h-[533px] items-start justify-between pb-[45px] pt-[25px] px-[25px] relative rounded-[24px] shrink-0" data-name="Card2">
               <div aria-hidden="true" className="absolute border border-[#ebebeb] border-solid inset-0 pointer-events-none rounded-[24px]" />
@@ -273,7 +273,7 @@ export default function WorkFlow() {
                 </CardBackgroundImage>
                 <ContentBackgroundImage text="Professional Portrait" text1="A confident, natural look for your profile" />
               </div>
-              <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">LinkedIn · Personal brand</p>
+              <p className="font-sans font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">LinkedIn · Personal brand</p>
             </div>
             <div className="bg-[#fafafa] content-stretch flex flex-col h-[533px] items-start justify-between pb-[45px] pt-[25px] px-[25px] relative rounded-[24px] shrink-0" data-name="Card3">
               <div aria-hidden="true" className="absolute border border-[#ebebeb] border-solid inset-0 pointer-events-none rounded-[24px]" />
@@ -283,7 +283,7 @@ export default function WorkFlow() {
                 </CardBackgroundImage>
                 <ContentBackgroundImage text="Personal Photoshoot" text1="Express your style, mood, and identity" />
               </div>
-              <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Lifestyle · Art · Self-expression</p>
+              <p className="font-sans font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Lifestyle · Art · Self-expression</p>
             </div>
             <div className="bg-[#fafafa] content-stretch flex flex-col h-[533px] items-start justify-between pb-[45px] pt-[25px] px-[25px] relative rounded-[24px] shrink-0" data-name="Card4">
               <div aria-hidden="true" className="absolute border border-[#ebebeb] border-solid inset-0 pointer-events-none rounded-[24px]" />
@@ -293,7 +293,7 @@ export default function WorkFlow() {
                 </CardBackgroundImage>
                 <ContentBackgroundImage text="Pet Portrait" text1="Beautiful portraits of the ones you love" />
               </div>
-              <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Cats · Dogs · Companions</p>
+              <p className="font-sans font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Cats · Dogs · Companions</p>
             </div>
             <div className="bg-[#fafafa] content-stretch flex flex-col h-[533px] items-start justify-between pb-[45px] pt-[25px] px-[25px] relative rounded-[24px] shrink-0" data-name="Card5">
               <div aria-hidden="true" className="absolute border border-[#ebebeb] border-solid inset-0 pointer-events-none rounded-[24px]" />
@@ -303,7 +303,7 @@ export default function WorkFlow() {
                 </CardBackgroundImage>
                 <ContentBackgroundImage text="Product Visuals" text1="Clean, compelling images that sell" />
               </div>
-              <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Lifestyle · Art · Self-expression</p>
+              <p className="font-sans font-normal leading-[normal] relative shrink-0 text-[#050505] text-[14px] w-full">Lifestyle · Art · Self-expression</p>
             </div>
             <div className="absolute flex h-[533px] items-center justify-center right-[-0.5px] top-0 w-[215px]" style={{ "--transform-inner-width": "0", "--transform-inner-height": "0" } as React.CSSProperties}>
               <div className="flex-none rotate-[270deg]">

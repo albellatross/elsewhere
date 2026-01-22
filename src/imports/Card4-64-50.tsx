@@ -37,8 +37,8 @@ export default function Card() {
           </div>
         </div>
         <div className="content-stretch flex flex-col gap-[15px] items-start leading-[normal] relative shrink-0 text-[#050505] w-full" data-name="content">
-          <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold relative shrink-0 text-[20px] w-full">Office Selfie</p>
-          <p className="font-['Alexandria:Regular',sans-serif] font-normal relative shrink-0 text-[16px] w-full">A playful remix that frames your pet like an office worker caught in a spontaneous selfie — earnest, awkward, and strangely relatable.</p>
+          <p className="font-sans font-semibold relative shrink-0 text-[20px] w-full">Office Selfie</p>
+          <p className="font-sans font-normal relative shrink-0 text-[16px] w-full">A playful remix that frames your pet like an office worker caught in a spontaneous selfie — earnest, awkward, and strangely relatable.</p>
         </div>
       </div>
     </div>

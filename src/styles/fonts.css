@@ -1,0 +1,268 @@
+/* Ginto Copilot */
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-400.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-400Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-410.ttf') format('truetype');
+  font-weight: 410;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-410Italic.ttf') format('truetype');
+  font-weight: 410;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-440.ttf') format('truetype');
+  font-weight: 440;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-440Italic.ttf') format('truetype');
+  font-weight: 440;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-450.ttf') format('truetype');
+  font-weight: 450;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-450Italic.ttf') format('truetype');
+  font-weight: 450;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-460.ttf') format('truetype');
+  font-weight: 460;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-460Italic.ttf') format('truetype');
+  font-weight: 460;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-480.ttf') format('truetype');
+  font-weight: 480;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-480Italic.ttf') format('truetype');
+  font-weight: 480;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-520.ttf') format('truetype');
+  font-weight: 520;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-520Italic.ttf') format('truetype');
+  font-weight: 520;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-530.ttf') format('truetype');
+  font-weight: 530;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-530Italic.ttf') format('truetype');
+  font-weight: 530;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-540.ttf') format('truetype');
+  font-weight: 540;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-540Italic.ttf') format('truetype');
+  font-weight: 540;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-600.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-600Italic.ttf') format('truetype');
+  font-weight: 600;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-650.ttf') format('truetype');
+  font-weight: 650;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-650Italic.ttf') format('truetype');
+  font-weight: 650;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-700.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-700Italic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-800.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot';
+  src: url('../assets/Font/GintoCopilot-800Italic.ttf') format('truetype');
+  font-weight: 800;
+  font-style: italic;
+}
+
+/* Ginto Copilot Nord */
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-Hairline.ttf') format('truetype');
+  font-weight: 100;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-HairlineItalic.ttf') format('truetype');
+  font-weight: 100;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-Thin.ttf') format('truetype');
+  font-weight: 200;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-ThinItalic.ttf') format('truetype');
+  font-weight: 200;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-LightItalic.ttf') format('truetype');
+  font-weight: 300;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-RegularItalic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-MediumItalic.ttf') format('truetype');
+  font-weight: 500;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-Semibold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-SemiboldItalic.ttf') format('truetype');
+  font-weight: 600;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-Black.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-BlackItalic.ttf') format('truetype');
+  font-weight: 800;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-Ultra.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ginto Copilot Nord';
+  src: url('../assets/Font/GintoCopilotNord-UltraItalic.ttf') format('truetype');
+  font-weight: 900;
+  font-style: italic;
+}
+

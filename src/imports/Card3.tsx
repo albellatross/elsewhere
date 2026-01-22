@@ -29,14 +29,14 @@ export default function Card() {
         <div className="flex items-center justify-center relative shrink-0 w-full">
           <div className="flex-none rotate-[180deg] scale-y-[-100%] w-full">
             <div className="content-stretch flex flex-col gap-[15px] items-start leading-[normal] relative text-[#050505] w-full" data-name="content">
-              <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold relative shrink-0 text-[20px] w-full">Personal Photoshoot</p>
-              <p className="font-['Alexandria:Regular',sans-serif] font-normal relative shrink-0 text-[16px] w-full">Express your style, mood, and identity</p>
+              <p className="font-sans font-semibold relative shrink-0 text-[20px] w-full">Personal Photoshoot</p>
+              <p className="font-sans font-normal relative shrink-0 text-[16px] w-full">Express your style, mood, and identity</p>
             </div>
           </div>
         </div>
         <div className="flex items-center justify-center min-w-full relative shrink-0 w-[min-content]">
           <div className="flex-none rotate-[180deg] scale-y-[-100%] w-full">
-            <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[normal] relative text-[#050505] text-[14px] w-full">Lifestyle · Art · Self-expression</p>
+            <p className="font-sans font-normal leading-[normal] relative text-[#050505] text-[14px] w-full">Lifestyle · Art · Self-expression</p>
           </div>
         </div>
       </div>

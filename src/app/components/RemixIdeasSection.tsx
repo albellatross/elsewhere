@@ -1,25 +1,19 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, useScroll, useTransform, useInView } from 'motion/react';
 import svgPaths from '../../imports/svg-k9p22mdyo7';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import imgCard02 from "figma:asset/7aa95b09a23fe314cbceec472e6eb4a58c4a639e.png";
-import imgImage1 from "figma:asset/a58bff95e38d1eef23bab058f0ede9bcc287192e.png";
-import imgCard1 from "figma:asset/8ff67fbd850326ea6af659bc13e9ac8dbc37d16a.png";
-import imgImage2 from "figma:asset/bd8c26711b42d9824251ddffe2917288e02582a6.png";
-import imgCard2 from "figma:asset/b6b2dd85428ea511bce874d4f06430114aad6aef.png";
-import imgImage3 from "figma:asset/2f2a4278676870bd4b14a1ba6544a4438fc53b98.png";
-import imgCard3 from "figma:asset/70ce267f1a846de764bc9f5d4f525565f6d7295f.png";
-import imgCard4 from "figma:asset/264e196e9b74fa3a6e3776ed82ab09ee14efabbb.png";
-import imgImage4 from "figma:asset/e159137de17bd63ae194d24c968da0a0852f069f.png";
+import { remixIdeas } from './remixIdeasConfig';
 import imgWavingHand from "figma:asset/c9d45269057a88787a328656000c1d10a4c1a3de.png";
+import { fetchVariantDetails, fetchVariants, type VariantDetailsResponse } from '../services/config';
 
 function Wrapper1({ children }: React.PropsWithChildren<{}>) {
+  const placeholder = remixIdeas[0]?.image ?? '';
   return (
     <div className="content-stretch flex flex-col items-start justify-between pb-[25px] md:pb-[45px] pt-[15px] md:pt-[25px] px-[15px] md:px-[25px] relative size-full">
       <div className="content-stretch flex flex-col gap-[20px] md:gap-[38px] items-start relative shrink-0 w-full">
         <div className="opacity-0 relative rounded-[16px] md:rounded-[24px] shrink-0 w-full aspect-square" data-name="card 02">
           <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-[16px] md:rounded-[24px]">
-            <img alt="" className="absolute h-[150%] left-0 max-w-none top-[-3.25%] w-full" src={imgCard02} />
+            <img alt="" className="absolute h-[150%] left-0 max-w-none top-[-3.25%] w-full" src={placeholder} />
           </div>
         </div>
       </div>
@@ -52,23 +46,25 @@ type ContentProps = {
 function Content({ text, text1 }: ContentProps) {
   return (
     <div className="content-stretch flex flex-col gap-[clamp(10px,1.1vh,16px)] items-start leading-[normal] relative shrink-0 text-[#050505] w-full">
-      <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold relative shrink-0 w-full
+      <p className="font-sans font-semibold relative shrink-0 w-full
                    text-[clamp(16px,4.2vw,19px)] md:text-[clamp(17px,1.3vw,20px)]">{text}</p>
-      <p className="font-['Alexandria:Regular',sans-serif] font-normal relative shrink-0 w-full text-[#5f5f66] leading-[1.4]
+      <p className="font-sans font-normal relative shrink-0 w-full text-[#5f5f66] leading-[1.4]
                    text-[clamp(12px,3.2vw,13px)] md:text-[clamp(12px,0.85vw,14px)]">{text1}</p>
     </div>
   );
 }
 
 type CardProps = {
+  id: string;
   image: string;
   beforeImage: string;
   title: string;
   description: string;
   index: number;
+  onCardClick?: (id: string) => void;
 };
 
-function RemixCard({ image, beforeImage, title, description, index }: CardProps) {
+function RemixCard({ id, image, beforeImage, title, description, index, onCardClick }: CardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(cardRef, { once: false, amount: 0.3 });
 
@@ -88,6 +84,15 @@ function RemixCard({ image, beforeImage, title, description, index }: CardProps)
           willChange: 'transform'
         }}
         data-name="Card"
+        role="button"
+        tabIndex={0}
+        onClick={() => onCardClick?.(id)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onCardClick?.(id);
+          }
+        }}
       >
         {/* 背景和图片 */}
         <div aria-hidden="true" className="absolute inset-0 pointer-events-none rounded-[clamp(16px,1.25vw,24px)]">
@@ -130,11 +135,15 @@ function RemixCard({ image, beforeImage, title, description, index }: CardProps)
             style={{
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
             }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onCardClick?.(id);
+            }}
           >
             <div className="overflow-clip relative shrink-0 size-[25px]">
               <img alt="" className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full" src={imgWavingHand} />
             </div>
-            <p className="font-['Alexandria:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[normal] relative shrink-0 text-[16px] text-[rgba(255,255,255,0.9)] text-nowrap">Try it</p>
+            <p className="font-sans font-semibold leading-[normal] relative shrink-0 text-[16px] text-[rgba(255,255,255,0.9)] text-nowrap">Try it</p>
           </button>
         </div>
       </div>
@@ -145,10 +154,15 @@ function RemixCard({ image, beforeImage, title, description, index }: CardProps)
   );
 }
 
-export default function RemixIdeasSection() {
+type RemixIdeasSectionProps = {
+  onCardClick?: (id: string) => void;
+};
+
+export default function RemixIdeasSection({ onCardClick }: RemixIdeasSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(sectionRef, { once: true, amount: 0.05 });
+  const [ideas, setIdeas] = useState(remixIdeas);
 
   // 滚动视差效果
   const { scrollYProgress } = useScroll({
@@ -159,32 +173,82 @@ export default function RemixIdeasSection() {
   const titleY = useTransform(scrollYProgress, [0, 0.3, 1], [50, 0, -30]);
   const titleOpacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0.8]);
 
-  const cards = [
-    {
-      beforeImage: imgImage1,
-      image: imgCard1,
-      title: 'A Moment in Zootopia',
-      description: 'Place yourself inside a lighthearted scene inspired by the world of Zootopia, blending your presence with animated charm.',
-    },
-    {
-      beforeImage: imgImage2,
-      image: imgCard2,
-      title: 'Step Into a Character',
-      description: 'Reimagine yourself as a character you love, preserving your features while shifting costume, style, and atmosphere.',
-    },
-    {
-      beforeImage: imgImage3,
-      image: imgCard3,
-      title: 'Scenes in Simple Lines',
-      description: 'Transform a favorite film moment into a minimal line illustration, focusing on form, mood, and visual rhythm.',
-    },
-    {
-      beforeImage: imgImage4,
-      image: imgCard4,
-      title: 'Office Selfie',
-      description: 'A playful remix that frames your pet like an office worker caught in a spontaneous selfie — earnest, awkward, and strangely relatable.',
-    },
-  ];
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolveUrl = (ref?: { public_url?: string | null }) => {
+      if (!ref) return null;
+      return ref.public_url ?? null;
+    };
+
+    const pickByRole = (refs: VariantDetailsResponse['references'] | undefined, tokens: string[]) => {
+      if (!refs?.length) return null;
+      return refs.find((ref) => {
+        const role = (ref.role || '').toLowerCase();
+        const key = (ref.key || '').toLowerCase();
+        return tokens.some((token) => role.includes(token) || key.includes(token));
+      }) || null;
+    };
+
+    const syncIdeas = async () => {
+      const variants = await fetchVariants('templates');
+      if (!variants || !variants.length || cancelled) return;
+
+      const activeKeys = Array.from(new Set(remixIdeas.map((idea) => idea.variantKey || idea.id)));
+      const detailPairs = await Promise.all(
+        activeKeys.map(async (key) => {
+          const detail = await fetchVariantDetails('templates', key);
+          return detail ? [key, detail] as const : null;
+        })
+      );
+
+      if (cancelled) return;
+
+      const detailsMap = new Map<string, VariantDetailsResponse>();
+      detailPairs.forEach((entry) => {
+        if (entry) detailsMap.set(entry[0], entry[1]);
+      });
+
+      setIdeas((prev) => prev.map((idea) => {
+        const variantKey = idea.variantKey || idea.id;
+        const variant = variants.find((item) => item.key === variantKey);
+        const detail = detailsMap.get(variantKey);
+
+        const refs = detail?.references ?? [];
+        const afterRef = pickByRole(refs, ['after', 'output', 'sample', 'final']);
+        const beforeRef = pickByRole(refs, ['before', 'input', 'source', 'upload']);
+
+        const metadata = (variant?.metadata_json && typeof variant.metadata_json === 'object')
+          ? variant.metadata_json as Record<string, unknown>
+          : undefined;
+
+        const accentCandidate = metadata && typeof metadata['accent'] === 'string'
+          ? metadata['accent'] as string
+          : null;
+        const gradientCandidate = metadata && Array.isArray(metadata['gradient']) && metadata['gradient'].length === 2
+          ? metadata['gradient'] as [string, string]
+          : null;
+
+        return {
+          ...idea,
+          title: variant?.name || idea.title,
+          description: variant?.description || idea.description,
+          image: resolveUrl(afterRef) || idea.image,
+          beforeImage: resolveUrl(beforeRef) || idea.beforeImage,
+          accent: accentCandidate || idea.accent,
+          gradient: gradientCandidate || idea.gradient,
+        };
+      }));
+    };
+
+    void syncIdeas();
+    const intervalId = window.setInterval(syncIdeas, 60000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   return (
     <section 
@@ -204,7 +268,7 @@ export default function RemixIdeasSection() {
           >
             <div className="content-stretch flex flex-col gap-[8px] md:gap-[12px] items-start relative shrink-0 max-w-[699px]" data-name="title">
               <motion.p 
-                className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[1.2] relative shrink-0 text-[#1c1c1e] text-[clamp(18px,1.45vw,26px)]"
+                className="font-nord font-semibold leading-[1.2] relative shrink-0 text-[#1c1c1e] text-[clamp(18px,1.45vw,26px)]"
                 initial={{ opacity: 0, x: -30 }}
                 animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -30 }}
                 transition={{ duration: 0.6 }}
@@ -212,7 +276,7 @@ export default function RemixIdeasSection() {
                 Create images that fit real moments
               </motion.p>
               <motion.p 
-                className="font-['Alexandria:Regular',sans-serif] font-normal leading-[1.3] md:leading-[1.35] relative shrink-0 text-[#5f5f66] text-[clamp(15px,4vw,17px)] md:text-[clamp(16px,1.05vw,19px)] w-full"
+                className="font-nord font-normal leading-[1.3] md:leading-[1.35] relative shrink-0 text-[#5f5f66] text-[clamp(15px,4vw,17px)] md:text-[clamp(16px,1.05vw,19px)] w-full"
                 initial={{ opacity: 0, x: -30 }}
                 animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -30 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
@@ -223,14 +287,16 @@ export default function RemixIdeasSection() {
           </motion.div>
           
           <div className="content-stretch flex flex-col md:flex-row gap-[30px] md:gap-[20px] items-stretch overflow-visible relative shrink-0 w-full" data-name="card content">
-            {cards.map((card, index) => (
+            {ideas.map((card, index) => (
               <RemixCard 
-                key={index}
+                key={card.id}
+                id={card.id}
                 image={card.image}
                 beforeImage={card.beforeImage}
                 title={card.title}
                 description={card.description}
                 index={index}
+                onCardClick={onCardClick}
               />
             ))}
           </div>

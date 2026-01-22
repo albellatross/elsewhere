@@ -1,33 +1,42 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useState, useEffect } from "react";
-import imgCamera from "figma:asset/c0cb7f405f534d0931b3d217184987677b8dc169.png";
-import imgCoffee from "figma:asset/9b32d44aeec93f527ca51f688ece674461b0a521.png";
-import imgRamen from "figma:asset/6da70a3b4311ab688c29ae593da8209e4bdbfae0.png";
-import imgChat from "figma:asset/9314a54b4384e800899339c7acb95475d5317b24.png";
-import imgSunbed from "figma:asset/de2313305842ec44aeb76e1c6053e3068372cf68.png";
-import imgWind from "figma:asset/edc88567adfb6d17a3e04c7556de54c9030c0466.png";
-import imgSunset from "figma:asset/98daef03d9a6e3f5fd827722d838b942079c1574.png";
-import imgCutlery from "figma:asset/eabdfbc8df9cb3de5632ebf075c284ca31320d5c.png";
-import imgMagic from "figma:asset/e232cb7ad1fd639eae1905fa662a692d35e584da.png";
-import imgCelebration from "figma:asset/0160c8d64442264a75be7e9ddf533c5b8fd1567c.png";
+import { useLottie } from "lottie-react";
+import cameraAnimation from "../../../../ainimation/Camera.json";
+import coffeeAnimation from "../../../../ainimation/coffee machine.json";
+import ramenAnimation from "../../../../ainimation/Ramen Bowl.json";
+import chatAnimation from "../../../../ainimation/Online Chatting.json";
+import sunbedAnimation from "../../../../ainimation/Beach Furniture.json";
+import windAnimation from "../../../../ainimation/Forest Tracking.json";
+import sunsetAnimation from "../../../../ainimation/Forest River.json";
+import cutleryAnimation from "../../../../ainimation/Potluck Dinner (1).json";
+import magicAnimation from "../../../../ainimation/Magic Wand.json";
+import celebrationAnimation from "../../../../ainimation/Confetti.json";
 
 const ANIMATION_DURATION = 3; // Sync with text rotation interval (3s)
 
-interface StandardAnimatedImageProps {
-  src: string;
-  alt: string;
+interface StandardAnimatedLottieProps {
+  animationData: object;
   onComplete: () => void;
   scaleMultiplier?: number;
   offset?: { x: number; y: number };
 }
 
-const StandardAnimatedImage = ({ 
-  src, 
-  alt, 
+const StandardAnimatedLottie = ({ 
+  animationData,
   onComplete, 
   scaleMultiplier = 1, 
   offset = { x: 0, y: 0 } 
-}: StandardAnimatedImageProps) => {
+}: StandardAnimatedLottieProps) => {
+  const options = {
+    animationData,
+    loop: true,
+    autoplay: true,
+    rendererSettings: {
+      preserveAspectRatio: "xMidYMid meet"
+    }
+  };
+  const { View } = useLottie(options, { style: { width: "100%", height: "100%" } });
+
   return (
     <motion.div 
       className="size-full flex items-center justify-center"
@@ -48,10 +57,8 @@ const StandardAnimatedImage = ({
         onComplete(); 
       }}
     >
-      <motion.img 
-        src={src} 
-        alt={alt} 
-        className="w-full h-full object-contain drop-shadow-xl"
+      <motion.div
+        className="w-full h-full drop-shadow-xl flex items-center justify-center"
         initial={{ 
           scale: 0.5 * scaleMultiplier,
           x: offset.x,
@@ -69,64 +76,68 @@ const StandardAnimatedImage = ({
             times: [0, 0.2, 0.35, 1], 
             ease: [0.34, 1.56, 0.64, 1] // Spring-like easing for more dynamic overshoot
         }}
-      />
+      >
+        <div className="w-full h-full flex items-center justify-center">
+          {View}
+        </div>
+      </motion.div>
     </motion.div>
   );
 };
 
 // --- Animated Camera ---
 const CameraSequence = ({ onComplete }: { onComplete: () => void }) => {
-  return <StandardAnimatedImage src={imgCamera} alt="Camera" onComplete={onComplete} />;
+  return <StandardAnimatedLottie animationData={cameraAnimation} onComplete={onComplete} />;
 };
 
 // --- Animated Coffee ---
 const CoffeeSequence = ({ onComplete }: { onComplete: () => void }) => {
-  // Scale down by 20% -> scaleMultiplier = 0.8
-  return <StandardAnimatedImage src={imgCoffee} alt="Coffee" onComplete={onComplete} scaleMultiplier={0.8} />;
+  // Scale down by 20% then additional 6% -> 0.8 * 0.94 = 0.752
+  return <StandardAnimatedLottie animationData={coffeeAnimation} onComplete={onComplete} scaleMultiplier={0.752} />;
 };
 
 // --- Animated Ramen ---
 const RamenSequence = ({ onComplete }: { onComplete: () => void }) => {
   // Scale down by an additional 15% from 0.8 -> 0.8 * 0.85 ≈ 0.68
   // Move slightly right by 2px
-  return <StandardAnimatedImage src={imgRamen} alt="Ramen" onComplete={onComplete} scaleMultiplier={0.68} offset={{ x: 2, y: 0 }} />;
+  return <StandardAnimatedLottie animationData={ramenAnimation} onComplete={onComplete} scaleMultiplier={0.68} offset={{ x: 2, y: 0 }} />;
 };
 
 // --- Animated Chat ---
 const ChatSequence = ({ onComplete }: { onComplete: () => void }) => {
-  // Move to top-left -> negative x and y offset
-  return <StandardAnimatedImage src={imgChat} alt="Chat" onComplete={onComplete} offset={{ x: -20, y: -20 }} />;
+  // Slightly move toward bottom-right while keeping a gentle top-left bias
+  return <StandardAnimatedLottie animationData={chatAnimation} onComplete={onComplete} offset={{ x: -12, y: -12 }} />;
 };
 
 // --- Animated Sunbed ---
 const SunbedSequence = ({ onComplete }: { onComplete: () => void }) => {
-  return <StandardAnimatedImage src={imgSunbed} alt="Sunbed" onComplete={onComplete} />;
+  return <StandardAnimatedLottie animationData={sunbedAnimation} onComplete={onComplete} />;
 };
 
 // --- Animated Wind ---
 const WindSequence = ({ onComplete }: { onComplete: () => void }) => {
-  return <StandardAnimatedImage src={imgWind} alt="Wind" onComplete={onComplete} />;
+  return <StandardAnimatedLottie animationData={windAnimation} onComplete={onComplete} />;
 };
 
 // --- Animated Sunset ---
 const SunsetSequence = ({ onComplete }: { onComplete: () => void }) => {
-  return <StandardAnimatedImage src={imgSunset} alt="Sunset" onComplete={onComplete} />;
+  return <StandardAnimatedLottie animationData={sunsetAnimation} onComplete={onComplete} />;
 };
 
 // --- Animated Cutlery ---
 const CutlerySequence = ({ onComplete }: { onComplete: () => void }) => {
-  return <StandardAnimatedImage src={imgCutlery} alt="Cutlery" onComplete={onComplete} />;
+  return <StandardAnimatedLottie animationData={cutleryAnimation} onComplete={onComplete} scaleMultiplier={1.08} />;
 };
 
 // --- Animated Magic ---
 const MagicSequence = ({ onComplete }: { onComplete: () => void }) => {
-  return <StandardAnimatedImage src={imgMagic} alt="Magic" onComplete={onComplete} />;
+  return <StandardAnimatedLottie animationData={magicAnimation} onComplete={onComplete} />;
 };
 
 // --- Animated Celebration ---
 const CelebrationSequence = ({ onComplete }: { onComplete: () => void }) => {
   // Now uses StandardAnimatedImage to ensure loop timing works
-  return <StandardAnimatedImage src={imgCelebration} alt="Celebration" onComplete={onComplete} />;
+  return <StandardAnimatedLottie animationData={celebrationAnimation} onComplete={onComplete} />;
 };
 
 // --- Main Coordinator ---
@@ -154,7 +165,7 @@ export const GenerationAnimation = () => {
   const globalTransition = { duration: 1.5, ease: "easeInOut" };
 
   return (
-    <div className="relative w-64 h-64 flex items-center justify-center select-none pointer-events-none">
+    <div className="relative w-28 h-28 flex items-center justify-center select-none pointer-events-none">
       <motion.div 
         className="size-full"
         animate={{ scale: globalScale }}

@@ -55,8 +55,8 @@ type ContentProps = {
 function Content({ text, text1 }: ContentProps) {
   return (
     <div className="content-stretch flex flex-col gap-[15px] items-start leading-[normal] relative shrink-0 text-[#050505] w-full">
-      <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold relative shrink-0 text-[20px] w-full">{text}</p>
-      <p className="font-['Alexandria:Regular',sans-serif] font-normal relative shrink-0 text-[16px] w-full">{text1}</p>
+      <p className="font-sans font-semibold relative shrink-0 text-[20px] w-full">{text}</p>
+      <p className="font-sans font-normal relative shrink-0 text-[16px] w-full">{text1}</p>
     </div>
   );
 }
@@ -67,8 +67,8 @@ export default function Component() {
       <div className="content-stretch flex flex-col gap-[40px] items-start relative shrink-0" data-name="content">
         <div className="content-stretch flex items-end justify-between relative shrink-0 w-full">
           <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0 w-[699px]" data-name="title">
-            <p className="font-['Alexandria:SemiBold',sans-serif] font-semibold leading-[28px] relative shrink-0 text-[#1c1c1e] text-[24px] text-nowrap">Create images that fit real moments</p>
-            <p className="font-['Alexandria:Regular',sans-serif] font-normal leading-[24px] relative shrink-0 text-[#5f5f66] text-[20px] w-[685px]">Subtle remix ideas that transform your images in unexpected ways — perfect for exploration, play, and inspiration.</p>
+            <p className="font-sans font-semibold leading-[28px] relative shrink-0 text-[#1c1c1e] text-[24px] text-nowrap">Create images that fit real moments</p>
+            <p className="font-sans font-normal leading-[24px] relative shrink-0 text-[#5f5f66] text-[20px] w-[685px]">Subtle remix ideas that transform your images in unexpected ways — perfect for exploration, play, and inspiration.</p>
           </div>
           <div className="content-stretch flex gap-[30px] items-start opacity-0 relative shrink-0">
             <Chevron>
