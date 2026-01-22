@@ -24,6 +24,6 @@
 ## 项目链接
 
 - **前端 (User App)**: [https://albellatross.github.io/elsewhere/](https://albellatross.github.io/elsewhere/)
-- **后台 (Admin Console)**: [https://albellatross.github.io/elsewhere/admin](https://albellatross.github.io/elsewhere/admin)
+- **后台 (Admin Console)**: [https://albellatross.github.io/elsewhere/#/admin](https://albellatross.github.io/elsewhere/#/admin)
 - **后端 (Supabase API)**: [https://kmjfxqzquuprgfgqurmc.supabase.co](https://kmjfxqzquuprgfgqurmc.supabase.co)
 - **代码仓库**: [https://github.com/albellatross/elsewhere](https://github.com/albellatross/elsewhere)
