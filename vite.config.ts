@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   // 让构建产物可用 file:// 直接打开预览
-  base: './',
+  base: process.env.NODE_ENV === 'production' ? '/elsewhere/' : '/',
   plugins: [
     // The React and Tailwind plugins are both required for Make, even if
     // Tailwind is not being actively used – do not remove them
