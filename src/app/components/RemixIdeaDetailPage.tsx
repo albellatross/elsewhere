@@ -392,15 +392,20 @@ export default function RemixIdeaDetailPage({ ideaId, onClose, onSelectIdea }: R
   ): Promise<{ headers: Record<string, string>; body: BodyInit }> => {
     const headers: Record<string, string> = { ...(planRequest.headers || {}) };
     const bodyData = { ...(planRequest.body_data || {}) };
-    const referenceImages = Array.isArray(bodyData.reference_images)
+    let referenceImages = Array.isArray(bodyData.reference_images)
       ? bodyData.reference_images.filter(Boolean)
       : [];
+    const blocksReferenceImages = typeof planRequest.url === 'string'
+      && (/openai\.com/i.test(planRequest.url) || /azure\.com/i.test(planRequest.url));
+    if (blocksReferenceImages) {
+      referenceImages = [];
+    }
 
     if (bodyData._attach_image_base64) {
       const base64DataUrl = await fileToBase64(file);
       const payload = { ...bodyData };
       delete payload._attach_image_base64;
-      if (referenceImages.length > 0) {
+        if (referenceImages.length > 0) {
         payload.reference_images = referenceImages;
       }
       payload.input_image = base64DataUrl.includes('base64,') ? base64DataUrl.split('base64,')[1] : base64DataUrl;
@@ -413,7 +418,7 @@ export default function RemixIdeaDetailPage({ ideaId, onClose, onSelectIdea }: R
       const editField = planRequest.url.includes('/images/edits') ? 'image[]' : 'image';
       formData.append(editField, file, file.name || 'image.png');
 
-      if (editField === 'image[]' && referenceImages.length > 0) {
+        if (editField === 'image[]' && referenceImages.length > 0) {
         for (let i = 0; i < referenceImages.length; i++) {
           const blob = await resolveReferenceBlob(referenceImages[i]);
           if (!blob) continue;

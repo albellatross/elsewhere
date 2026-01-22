@@ -442,10 +442,6 @@ serve(async (req) => {
                             _attach_image: true,
                             _mode: 'edits'
                         };
-
-                        if (effectiveRefImages.length > 0) {
-                            bodyData.reference_images = effectiveRefImages;
-                        }
                     } else {
                         // Standard Execution
                         const formData = new FormData();
@@ -481,13 +477,6 @@ serve(async (req) => {
                         // ⚡️ SPEED OPTIMIZATION: Force standard quality for speed
                         quality: "standard"
                     };
-
-                    if (effectiveRefImages.length > 0) {
-                        requestBody.reference_images = effectiveRefImages;
-                        if (typeof referenceStrength === 'number') {
-                            requestBody.reference_strength = referenceStrength;
-                        }
-                    }
 
                     if (isAzure) {
                         // 🧹 Robust Azure URL Cleaning
